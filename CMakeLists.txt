@@ -199,7 +199,9 @@ INCLUDE_DIRECTORIES(
   ${PROJECT_SOURCE_DIR}/source/physics/include
   ${PROJECT_SOURCE_DIR}/source/digits_hits/include
   ${PROJECT_SOURCE_DIR}/source/general/include
-  ${PROJECT_SOURCE_DIR}/source/externals/clhep/include)
+  ${PROJECT_SOURCE_DIR}/source/externals/clhep/include
+  ${PROJECT_SOURCE_DIR}/source/julia/include
+  /home/agmez/julia-1.3.1/include/julia)
 
 #=========================================================
 # Locate sources and headers for this project
@@ -210,8 +212,10 @@ FILE(GLOB sources
   ${PROJECT_SOURCE_DIR}/source/physics/src/*.cc
   ${PROJECT_SOURCE_DIR}/source/general/src/*.cc
   ${PROJECT_SOURCE_DIR}/source/externals/clhep/src/CLHEP/Matrix/*.cc
-  ${PROJECT_SOURCE_DIR}/source/externals/clhep/src/CLHEP/RandomObjects/*.cc)
-
+  ${PROJECT_SOURCE_DIR}/source/externals/clhep/src/CLHEP/RandomObjects/*.cc
+  ${PROJECT_SOURCE_DIR}/source/julia/src/*.c
+  ${PROJECT_SOURCE_DIR}/source/julia/src/*.cc)
+  
 FILE(GLOB headers
   ${PROJECT_SOURCE_DIR}/source/arf/include/*.hh
   ${PROJECT_SOURCE_DIR}/source/geometry/include/*.hh
@@ -219,7 +223,20 @@ FILE(GLOB headers
   ${PROJECT_SOURCE_DIR}/source/digits_hits/include/*.hh
   ${PROJECT_SOURCE_DIR}/source/general/include/*.hh
   ${PROJECT_SOURCE_DIR}/source/externals/clhep/include/*.hh
-  ${PROJECT_SOURCE_DIR}/source/gpu/include/*.hh)
+  ${PROJECT_SOURCE_DIR}/source/gpu/include/*.hh
+  ${PROJECT_SOURCE_DIR}/source/julia/include/*.h
+  ${PROJECT_SOURCE_DIR}/source/julia/include/*.hh)
+
+#=========================================================
+# JULIA
+#IF(GATE_USE_JULIA)
+  #SET(JL_SHARE "$(shell julia -e 'print(joinpath(Sys.BINDIR, Base.DATAROOTDIR, "julia"))')")
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+SET(JULIA_LIBRARIES "/home/agmez/julia-1.3.1/lib")
+SET(JULIA_LIBRARY "-L'${JULIA_LIBRARIES}' -Wl,-rpath,'${JULIA_LIBRARIES}' -Wl,-rpath,'${JULIA_LIBRARIES}/julia' -ljulia")
+#  INCLUDE_DIRECTORIES("/home/agmez/julia-1.3.1/include/julia")
+SET(LINK_DIRECTORIES "-Wl,-rpath,'${JULIA_LIBRARIES}' -Wl,-rpath,'${JULIA_LIBRARIES}/julia' -ljulia")
+#ENDIF()
 
 #=========================================================
 # RTK
@@ -256,7 +273,8 @@ ELSE(GATE_USE_GPU AND CUDA_FOUND)
   ADD_EXECUTABLE(Gate Gate.cc ${sources} ${headers})
 ENDIF(GATE_USE_GPU AND CUDA_FOUND)
 
-TARGET_LINK_LIBRARIES(Gate ${Geant4_LIBRARIES} ${ROOT_LIBRARIES} ${CLHEP_LIBRARIES} ${LIBXML2_LIBRARIES} ${LIBXRL_LIBRARIES} ${LMF_LIBRARY} ${ECAT7_LIBRARY} ${ITK_LIBRARIES} pthread)
+
+TARGET_LINK_LIBRARIES(Gate ${Geant4_LIBRARIES} ${ROOT_LIBRARIES} ${CLHEP_LIBRARIES} ${LIBXML2_LIBRARIES} ${LIBXRL_LIBRARIES} ${LMF_LIBRARY} ${ECAT7_LIBRARY} ${ITK_LIBRARIES}  pthread)
 
 #=========================================================
 INSTALL(TARGETS Gate DESTINATION bin)

@@ -11,6 +11,7 @@ See LICENSE.md for further details
 #include "GateRunManager.hh"
 
 #include "G4UIcmdWithoutParameter.hh"
+#include "G4UIcmdWithAString.hh"
 #include "G4UIcmdWithABool.hh"
 #include "GateDetectorConstruction.hh"
 
@@ -26,6 +27,14 @@ GateRunManagerMessenger::GateRunManagerMessenger(GateRunManager* runManager)
 
   pRunEnableGlobalOutputCmd = new G4UIcmdWithABool("/gate/run/enableGlobalOutput",this);
   pRunEnableGlobalOutputCmd->SetGuidance("Enabled by default. Use 'false' only for applications that do not use 'systems' (PET, SPECT etc), it will be a bit faster.");
+
+  pRunJuliaREPL = new G4UIcmdWithAString("/gate/run/juliarepl",this);
+  pRunJuliaREPL->SetGuidance("Initialize Julia REPL. Use ctrl+D to end JuliaREPL.");
+  //pRunJuliaREPL->SetParameterName("juliacode",false);
+
+  pRunJuliaTest = new G4UIcmdWithoutParameter("/gate/run/juliatest",this);
+  pRunJuliaTest->SetGuidance("Run some julia test");
+
 }
 //----------------------------------------------------------------------------------------
 
@@ -35,6 +44,8 @@ GateRunManagerMessenger::~GateRunManagerMessenger()
   delete pRunInitCmd;
   delete pRunGeomUpdateCmd;
   delete pRunEnableGlobalOutputCmd;
+  delete pRunJuliaREPL;
+  delete pRunJuliaTest;
 }
 //----------------------------------------------------------------------------------------
 
@@ -49,6 +60,12 @@ void GateRunManagerMessenger::SetNewValue(G4UIcommand* command, G4String newValu
   }
   else if (command == pRunEnableGlobalOutputCmd) {
     pRunManager->EnableGlobalOutput(pRunEnableGlobalOutputCmd->GetNewBoolValue(newValue));
+  }
+  else if (command == pRunJuliaTest) {
+    pRunManager->JuliaTest();
+  }
+  else if (command == pRunJuliaREPL) {
+    pRunManager->JuliaREPL(newValue);
   }
 }
 //----------------------------------------------------------------------------------------

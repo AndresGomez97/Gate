@@ -1262,6 +1262,8 @@ __device__ double Brent_real(int index, unsigned long *device_x_brent, unsigned 
 #undef ss
 }
 
+extern "C" {
+
 // Init Brent seed
 __global__ void kernel_brent_init(StackParticle stackpart) {
 	unsigned int id = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
@@ -1272,11 +1274,16 @@ __global__ void kernel_brent_init(StackParticle stackpart) {
 	}
 }
 
+}
+
 /***********************************************************
  * Particles source
  ***********************************************************/
 
 // Voxelized back2back source
+
+extern "C" {
+
 __global__ void kernel_voxelized_source_b2b(StackParticle g1, StackParticle g2, Activities act,
                                             float E, int3 size_in_vox, float3 voxel_size) {
 	unsigned int id = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
@@ -1342,6 +1349,8 @@ __global__ void kernel_voxelized_source_b2b(StackParticle g1, StackParticle g2, 
     g2.active[id] = 1;
     g2.endsimu[id] = 0;
     g2.type[id] = GAMMA;
+}
+
 }
 
 /***********************************************************
@@ -1967,6 +1976,9 @@ __device__ float MSC_Effect(StackParticle electrons, Materials materials, float 
  ***********************************************************/
 
 // Regular Navigator with voxelized phantom for photons without secondary
+
+extern "C" {
+
 __global__ void kernel_NavRegularPhan_Photon_NoSec(StackParticle photons,
                                                    Volume phantom,
                                                    Materials materials,
@@ -2073,6 +2085,10 @@ __global__ void kernel_NavRegularPhan_Photon_NoSec(StackParticle photons,
         float discrete_loss = Compton_Effect_Standard_NoSec(photons, id, count_d);
     }
 }
+
+}
+
+extern "C" {
 
 // Navigator with hexagonal hole collimator for photons without secondary 
 __global__ void kernel_NavHexaColli_Photon_NoSec(StackParticle photons, Colli colli, 
@@ -2290,8 +2306,12 @@ __global__ void kernel_NavHexaColli_Photon_NoSec(StackParticle photons, Colli co
 	
 }
 
+}
 
 // Regular Navigator with voxelized phantom for photons with secondary
+
+extern "C" {
+
 __global__ void kernel_NavRegularPhan_Photon_WiSec(StackParticle photons,
                                                    StackParticle electrons,
                                                    Volume phantom,
@@ -2438,7 +2458,12 @@ __global__ void kernel_NavRegularPhan_Photon_WiSec(StackParticle photons,
     atomicAdd(&dosemap.edep[index_phantom.w], discrete_loss);
 }
 
+}
+
 // Regular Navigator with voxelized phantom for electrons bind with a photon
+
+extern "C" {
+
 __global__ void kernel_NavRegularPhan_Electron_BdPhoton(StackParticle electrons,
                                                         StackParticle photons,
                                                         Volume phantom,
@@ -2638,5 +2663,7 @@ __global__ void kernel_NavRegularPhan_Electron_BdPhoton(StackParticle electrons,
                        + index_phantom.x; // linear index
     //printf("index dosemap %i\n", index_phantom.w);
     atomicAdd(&dosemap.edep[index_phantom.w], discrete_loss);
+
+}
 
 }

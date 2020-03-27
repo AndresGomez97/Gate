@@ -17,6 +17,8 @@
 #cmakedefine GATE_USE_ITK                  @GATE_USE_ITK@
 #cmakedefine GATE_USE_DAVIS                @GATE_USE_DAVIS@
 
+   
+
 #ifdef GATE_USE_ROOT
  #define G4ANALYSIS_USE_ROOT 1
 #endif
@@ -35,6 +37,8 @@
 #define G4VERSION_PATCH              ${G4VERSION_PATCH}
 #cmakedefine GATE_USE_GPU            @GATE_USE_GPU@
 #cmakedefine CUDA_FOUND              @CUDA_FOUND@
+#cmakedefine GATE_USE_JULIA          @GATE_USE_JULIA@
+
 
 #ifndef G4VERSION_MINOR
    #define G4VERSION_MINOR 0

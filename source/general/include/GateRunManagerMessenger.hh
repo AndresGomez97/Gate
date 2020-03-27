@@ -12,6 +12,7 @@ See LICENSE.md for further details
 #include "G4UImessenger.hh"
 class GateRunManager;
 class G4UIcmdWithoutParameter;
+class G4UIcmdWithAString;
 class G4UIcmdWithABool;
 
 //-----------------------------------------------------------------------------
@@ -28,6 +29,8 @@ class GateRunManagerMessenger : public G4UImessenger
     G4UIcmdWithoutParameter* pRunInitCmd;
     G4UIcmdWithoutParameter* pRunGeomUpdateCmd;
     G4UIcmdWithABool* pRunEnableGlobalOutputCmd;  
+    G4UIcmdWithAString* pRunJuliaREPL;
+    G4UIcmdWithoutParameter* pRunJuliaTest;
 };
 //-----------------------------------------------------------------------------
 

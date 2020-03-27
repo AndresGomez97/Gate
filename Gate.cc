@@ -18,6 +18,15 @@
 #include <queue>
 #include <locale.h>
 
+
+#include <dlfcn.h>
+#include "julia.h"
+
+#include <stdio.h>
+#include <dlfcn.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "G4UImanager.hh"
 #include "G4UIterminal.hh"
 #include "GateUIterminal.hh"
@@ -57,8 +66,6 @@
 #endif
 #endif
 #endif
-
-
 
 //-----------------------------------------------------------------------------
 void printHelpAndQuit( G4String msg )
@@ -174,6 +181,22 @@ void welcome()
 //-----------------------------------------------------------------------------
 
 
+char * readFile2(char const * filename) {
+    FILE *f = fopen(filename, "r+");
+    if(f == NULL){
+	printf("File=null \n");
+    }
+    assert(f);
+    fseek(f, 0, SEEK_END);
+    long length = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    char *buffer = (char *) malloc(length + 1);
+    buffer[length] = '\0';
+    fread(buffer, 1, length, f);
+    fclose(f);
+    return buffer;
+}
+
 //-----------------------------------------------------------------------------
 int main( int argc, char* argv[] )
 {
@@ -188,6 +211,7 @@ int main( int argc, char* argv[] )
   // another (grid or cluster).  See
   // http://root.cern.ch/root/roottalk/roottalk08/0690.html
   // DS.
+  
   gROOT->GetPluginManager()->AddHandler( "TVirtualStreamerInfo", "*", "TStreamerInfo", "RIO", "TStreamerInfo()" );
 #endif
 
@@ -412,11 +436,45 @@ int main( int argc, char* argv[] )
   else
 #endif
     {
-      if (session && !isMacroFile) { // Terminal
+
+     if (session && !isMacroFile) { // Terminal
+
+	      //CALLING JULIA CODE WITH CUDA PACKAGES
+	      void *handle;
+        typedef void (*t_jl_init)(void);
+        typedef jl_value_t *(*t_jl_eval_string)(const char*);
+       	typedef int (*t_jl_atexit_hook)(int);
+
+	      //DLOPEN LIBJULIA
+  	    handle = dlopen("/home/agmez/julia-1.3.1/lib/libjulia.so", RTLD_LAZY | RTLD_GLOBAL);
+  	    if (!handle) {
+     		  fprintf(stderr, "%s\n", dlerror());
+      	  exit(EXIT_FAILURE);
+  	    }
+
+  	    dlerror();
+
+	      //ACCESSING LIBJULIA METHODS
+        t_jl_init jl_init = (t_jl_init)dlsym(handle, "jl_init__threading");
+        t_jl_atexit_hook jl_atexit_hook= (t_jl_atexit_hook)dlsym(handle, "jl_atexit_hook");
+        t_jl_eval_string jl_eval_string = (t_jl_eval_string)dlsym(handle, "jl_eval_string");
+
+  	    dlerror();
+
+	      char *ret = readFile2("/home/agmez/gate/Gate-Julia/source/julia/src/introduction.jl");
+
+  	    jl_init();
+
+	      //jl_eval_string(ret);
+  	    //jl_eval_string("Base._start()");
+
+  	    jl_atexit_hook(0);
+
+	      //GATE SESSION START
         session->SessionStart();
         delete session;
-      }
-    }
+	}
+}
 
 
 #ifdef G4ANALYSIS_USE_GENERAL
@@ -441,3 +499,4 @@ int main( int argc, char* argv[] )
   return 0;
 }
 //-----------------------------------------------------------------------------
+

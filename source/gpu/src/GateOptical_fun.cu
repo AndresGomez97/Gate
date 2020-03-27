@@ -213,6 +213,8 @@ __device__ float3 Fresnel_process(StackParticle photon, unsigned int id,
  * Source
  ***********************************************************/
 
+ extern "C" {
+
 __global__ void kernel_optical_voxelized_source(StackParticle photons, 
                                                 Volume phantom_mat,
                                                 float *phantom_act,
@@ -275,6 +277,7 @@ __global__ void kernel_optical_voxelized_source(StackParticle photons,
     photons.trackID[id] = 0;
 }
 
+}
 
 /***********************************************************
  * Tracking Kernel
@@ -283,6 +286,8 @@ __global__ void kernel_optical_voxelized_source(StackParticle photons,
 // Optical Photons - regular tracking
 // This is the Regular Navigator - same as in GateCommon_fun.cu (kernel_NavRegularPhan_Photon_NoSec)
 // Regular Navigator with voxelized phantom for photons without secondary
+
+extern "C" {
 
 __global__ void kernel_optical_navigation_regular(StackParticle photons, Volume phantom, int* count_d) {
 
@@ -465,6 +470,8 @@ next_discrete_process = OPTICALPHOTON_BOUNDARY_VOXEL;
  
         Mie_scatter(photons, id, mat);
     }
+
+}
 
 }
 
