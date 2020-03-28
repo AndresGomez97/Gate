@@ -1,4 +1,4 @@
-include("GateCollimKernels.jl")
+include("GateKernels.jl")
 
 # DIMENSION FOR MATRIX 
 dims = (3,4)
@@ -30,7 +30,7 @@ function test_kernel_map_entry()
 	println("Hole before calling kernel: \n",hole)
 	println("----------------------------------------------------------------------")
 
-	res = GateCollimKernels.f_kernel_map_entry(px,py,pz,entry_collim_y,entry_collim_z,hole,size_y,size_z,particle_size,nBlocks,nThreads)
+	res = f_kernel_map_entry(px,py,pz,entry_collim_y,entry_collim_z,hole,size_y,size_z,particle_size,nBlocks,nThreads)
 
     println("")
 	println("----------------------------------------------------------------------")
@@ -74,7 +74,7 @@ function test_kernel_map_projection()
 	println("PZ before calling kernel: \n",pz)
 	println("----------------------------------------------------------------------")
 
-	res_x,res_y,res_z = GateCollimKernels.f_kernel_map_projection(px,py,pz,dx,dy,dz,hole,planeToProject,particle_size,nBlocks,nThreads)
+	res_x,res_y,res_z = f_kernel_map_projection(px,py,pz,dx,dy,dz,hole,planeToProject,particle_size,nBlocks,nThreads)
 
 	println("")
     println("----------------------------------------------------------------------")
@@ -119,7 +119,7 @@ function test_kernel_map_exit()
 	println("Hole before calling kernel: \n",hole)
 	println("----------------------------------------------------------------------")
 
-	res = GateCollimKernels.f_kernel_map_exit(px,py,pz,entry_collim_y,entry_collim_z,hole,size_y,size_z,particle_size,nBlocks,nThreads)
+	res = f_kernel_map_exit(px,py,pz,entry_collim_y,entry_collim_z,hole,size_y,size_z,particle_size,nBlocks,nThreads)
 
     println("")
 	println("----------------------------------------------------------------------")
