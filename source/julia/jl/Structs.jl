@@ -6,6 +6,20 @@ using CUDAnative
 ######################################## Structs #################################################
 ##################################################################################################
 
+# Int3 struct
+struct Int3
+    x::Int32
+    y::Int32
+    z::Int32
+end
+
+# Float3 struct
+struct Float3
+    x::Float32
+    y::Float32
+    z::Float32
+end
+
 # Cuda StackParticle struct
 struct CuStackParticle
 	E::CuPtr{Float32}
@@ -22,7 +36,7 @@ struct CuStackParticle
     seed::CuPtr{UInt32}
     active::CuPtr{Char}
 	endsimu::CuPtr{Char}
-	table_x_brent::CuPtr{Int64}
+	table_x_brent::CuPtr{UInt64}
     size::UInt32
 end
 
@@ -42,7 +56,7 @@ struct JlStackParticle
     seed::Array{UInt32}
     active::Array{Char}
     endsimu::Array{Char}
-    table_x_brent::Array{Int64}
+    table_x_brent::Array{UInt64}
     size::UInt32
 end
 
@@ -62,7 +76,7 @@ struct JlCuStackParticle
     d_seed::CuArray{UInt32}
     d_active::CuArray{Char}
     d_endsimu::CuArray{Char}
-    d_table_x_brent::CuArray{Int64}
+    d_table_x_brent::CuArray{UInt64}
     size::UInt32
 end
 
@@ -267,20 +281,6 @@ struct Colli
     LinRepVecX::Float64
     LinRepVecY::Float64
     LinRepVecZ::Float64
-end
-
-# Int3 struct
-struct Int3
-    x::Int32
-    y::Int32
-    z::Int32
-end
-
-# Float3 struct
-struct Float3
-    x::Float32
-    y::Float32
-    z::Float32
 end
 
 ##################################################################################################

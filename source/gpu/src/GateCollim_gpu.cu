@@ -295,6 +295,10 @@ void GateGPUCollimator_process(GateGPUCollimator *collimator, GateGPUParticle *p
     jl_array_t *entry_collim_y = jl_ptr_to_array(array_float32, collimator->gpu_entry_collim_y, dims, 0);
     jl_array_t *entry_collim_z = jl_ptr_to_array(array_float32, collimator->gpu_entry_collim_z, dims, 0);
     
+    // exit_collim_y exit_collim_z
+    jl_array_t *entry_collim_y = jl_ptr_to_array(array_float32, collimator->gpu_exit_collim_y, dims, 0);
+    jl_array_t *entry_collim_z = jl_ptr_to_array(array_float32, collimator->gpu_exit_collim_z, dims, 0);
+
     // hole
     jl_array_t *hole = jl_ptr_to_array(array_int32, h_hole, dims, 0);
 
@@ -349,8 +353,8 @@ void GateGPUCollimator_process(GateGPUCollimator *collimator, GateGPUParticle *p
     args[0] = (jl_value_t*)px;
     args[1] = (jl_value_t*)py;
     args[2] = (jl_value_t*)pz;
-    args[3] = (jl_value_t*)entry_collim_y;
-    args[4] = (jl_value_t*)entry_collim_z;
+    args[3] = (jl_value_t*)exit_collim_y;
+    args[4] = (jl_value_t*)exit_collim_z;
     args[5] = (jl_value_t*)hole;
     args[6] = jl_box_uint32(y_size);
     args[7] = jl_box_uint32(z_size);
