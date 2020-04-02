@@ -439,7 +439,7 @@ void GateToGPUImageSPECT::RecordBeginOfAcquisition()
         m_fy, m_fz, m_collimatorHeight,
         m_spaceBetweenCollimatorDetector, m_centerOfPxlY, m_centerOfPxlZ,
         m_y_pixel_size, m_z_pixel_size, m_cudaDevice );
-				GateGPUCollimator_init( m_gpuCollimator );
+				//GateGPUCollimator_init( m_gpuCollimator );
 		}
 		#endif
 
@@ -482,8 +482,8 @@ void GateToGPUImageSPECT::RecordEndOfAcquisition()
 
 		if( m_timeFlag )
 		{
-			//G4cout << "Elapsed time in GPU/SPECT collimator: " << m_elapsedTime
-			//	<< " seconds\n";
+			G4cout << "Elapsed time in GPU/SPECT collimator: " << m_elapsedTime
+				<< " seconds\n";
             printf("Elapsed time in SPECT collimator: %f s\n", m_elapsedTime);
 		}
 
@@ -812,10 +812,15 @@ void GateToGPUImageSPECT::RecordStepWithVolume( const GateVVolume*,
                     // timing - JB
 	                gettimeofday(&tv, NULL);
 	                start = tv.tv_sec + tv.tv_usec / 1000000.0;
+					if (nVerboseLevel > 0)
+						G4cout << "Entering GateGPUCollimator_process\n";
 
+					//GateGPUCollimator_process( m_gpuCollimator, m_gpuParticle );
 					GateGPUCollimator_process( m_gpuCollimator, m_gpuParticle );
-
-                    // timing - JB
+					if(nVerboseLevel > 0)
+						G4cout << "Exiting GateGPUCollimator_process\n";
+                    
+					// timing - JB
 	                gettimeofday(&tv, NULL);
 	                end = tv.tv_sec + tv.tv_usec / 1000000.0;
 					m_elapsedTime += (G4double)(end - start);
@@ -824,6 +829,8 @@ void GateToGPUImageSPECT::RecordStepWithVolume( const GateVVolume*,
 					sizeAfter = m_gpuParticle->size;
 					if( nVerboseLevel > 0 )
 						G4cout << "Particle exit GPU: " << m_gpuParticle->size << Gateendl;
+
+						
 				}
 				#endif
 

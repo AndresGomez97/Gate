@@ -2,6 +2,8 @@ include("GateKernels.jl")
 
 using Test
 
+#using GateKernels: f_kernel_map_entry,f_kernel_map_exit,f_kernel_map_projection
+
 # Dims
 dims = (3,3)
 
@@ -52,7 +54,7 @@ function test_kernel_map_entry()
 	println("Hole before calling kernel: \n",hole)
 	println("----------------------------------------------------------------------")
 	println("")
-	res = f_kernel_map_entry(px,py,pz,entry_collim_y,entry_collim_z,hole,size_y,size_z,particle_size,nBlocks,nThreads)
+	res = GateKernels.f_kernel_map_entry(px,py,pz,entry_collim_y,entry_collim_z,hole,size_y,size_z,particle_size,nBlocks,nThreads)
 
 	@test res == [-1 -1 -1; -1 -1 -1; -1 -1 -1]
 
@@ -94,7 +96,7 @@ function test_kernel_map_entry()
 	println("----------------------------------------------------------------------")
 	println("")
 
-	res = f_kernel_map_entry(px,py,pz,entry_collim_y,entry_collim_z,hole,size_y,size_z,particle_size,nBlocks,nThreads)
+	res = GateKernels.f_kernel_map_entry(px,py,pz,entry_collim_y,entry_collim_z,hole,size_y,size_z,particle_size,nBlocks,nThreads)
 
 	@test res == [-1 0 -1; -1 -1 -1; 0 -1 -1]
 
@@ -133,7 +135,7 @@ function test_kernel_map_entry()
 	println("----------------------------------------------------------------------")
 	println("")
 
-	res = f_kernel_map_entry(px,py,pz,entry_collim_y,entry_collim_z,hole,size_y,size_z,particle_size,nBlocks,nThreads)
+	res = GateKernels.f_kernel_map_entry(px,py,pz,entry_collim_y,entry_collim_z,hole,size_y,size_z,particle_size,nBlocks,nThreads)
 
 	@test res == [0 0 0; 0 0 0; 0 0 0]
 
@@ -200,7 +202,7 @@ function test_kernel_map_projection()
 	println("----------------------------------------------------------------------")
 	println("")
 
-	res_x,res_y,res_z = f_kernel_map_projection(px,py,pz,dx,dy,dz,hole,planeToProject,particle_size,nBlocks,nThreads)
+	res_x,res_y,res_z = GateKernels.f_kernel_map_projection(px,py,pz,dx,dy,dz,hole,planeToProject,particle_size,nBlocks,nThreads)
 
 	@test res_x == px
 	@test res_y == py
@@ -267,7 +269,7 @@ function test_kernel_map_projection()
 	println("----------------------------------------------------------------------")
 	println("")
 	
-	res_x,res_y,res_z = f_kernel_map_projection(px,py,pz,dx,dy,dz,hole,planeToProject,particle_size,nBlocks,nThreads)
+	res_x,res_y,res_z = GateKernels.f_kernel_map_projection(px,py,pz,dx,dy,dz,hole,planeToProject,particle_size,nBlocks,nThreads)
 
 	@test res_x == [3.0 3.0 2.0]
 	@test res_y == [4.5 -1.5 4.0]
@@ -332,7 +334,7 @@ function test_kernel_map_projection()
 	println("----------------------------------------------------------------------")
 	println("")
 	
-	res_x,res_y,res_z = f_kernel_map_projection(px,py,pz,dx,dy,dz,hole,planeToProject,particle_size,nBlocks,nThreads)
+	res_x,res_y,res_z = GateKernels.f_kernel_map_projection(px,py,pz,dx,dy,dz,hole,planeToProject,particle_size,nBlocks,nThreads)
 
 	@test res_x == [3.0 2.0 3.0]
 	@test res_y == [51.0 4.0 -2.0]
@@ -405,7 +407,7 @@ function test_kernel_map_exit()
 	println("----------------------------------------------------------------------")
 	println("")
 
-	res = f_kernel_map_exit(px,py,pz,exit_collim_y,exit_collim_z,hole,size_y,size_z,particle_size,nBlocks,nThreads)
+	res = GateKernels.f_kernel_map_exit(px,py,pz,exit_collim_y,exit_collim_z,hole,size_y,size_z,particle_size,nBlocks,nThreads)
 
 	@test res == [-1 -1 -1; -1 -1 -1; -1 -1 0]
 
@@ -449,7 +451,7 @@ function test_kernel_map_exit()
 	println("----------------------------------------------------------------------")
 	println("")
 
-	res = f_kernel_map_exit(px,py,pz,exit_collim_y,exit_collim_z,hole,size_y,size_z,particle_size,nBlocks,nThreads)
+	res = GateKernels.f_kernel_map_exit(px,py,pz,exit_collim_y,exit_collim_z,hole,size_y,size_z,particle_size,nBlocks,nThreads)
 
 	@test res == [-1 0 -1; -1 -1 -1; 0 -1 -1]
 
@@ -489,7 +491,7 @@ function test_kernel_map_exit()
 	println("----------------------------------------------------------------------")
 	println("")
 	
-	res = f_kernel_map_exit(px,py,pz,exit_collim_y,exit_collim_z,hole,size_y,size_z,particle_size,nBlocks,nThreads)
+	res = GateKernels.f_kernel_map_exit(px,py,pz,exit_collim_y,exit_collim_z,hole,size_y,size_z,particle_size,nBlocks,nThreads)
 
 	@test res == [0 0 0; 0 0 0; 0 0 0]
 

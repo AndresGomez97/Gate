@@ -281,7 +281,6 @@ void GateRunManager::JuliaREPL(G4String juliacode)
   typedef int (*t_jl_atexit_hook)(int);
   typedef jl_value_t *(*t_jl_exception_occurred)(void);
   typedef const char *(*t_jl_typeof_str)(jl_value_t *);
-  typedef const char *(*t_jl_typeof_str)(jl_value_t *);
   typedef const char *(*t_jl_string_ptr)(jl_value_t*);
 
   //DLOPEN LIBJULIA
@@ -305,15 +304,12 @@ void GateRunManager::JuliaREPL(G4String juliacode)
 
   jl_init();
 
-  jl_value_t *ret = jl_eval_string(juliacode);
+  jl_eval_string("include(\"../../../source/julia/jl/async.jl\")");
 
   if (jl_exception_occurred()){
   	printf("%s \n", jl_typeof_str(jl_exception_occurred()));
   }
-  /*else {
-	const char * res = jl_string_ptr(ret);
-  	printf("%s \n", res);
-  }*/
+
   jl_atexit_hook(0);
 }
 //----------------------------------------------------------------------------------------
