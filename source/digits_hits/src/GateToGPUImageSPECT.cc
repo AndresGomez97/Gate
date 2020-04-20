@@ -813,12 +813,9 @@ void GateToGPUImageSPECT::RecordStepWithVolume( const GateVVolume*,
 	                gettimeofday(&tv, NULL);
 	                start = tv.tv_sec + tv.tv_usec / 1000000.0;
 					if (nVerboseLevel > 0)
-						G4cout << "Entering GateGPUCollimator_process\n";
 
-					//GateGPUCollimator_process( m_gpuCollimator, m_gpuParticle );
 					GateGPUCollimator_process( m_gpuCollimator, m_gpuParticle );
 					if(nVerboseLevel > 0)
-						G4cout << "Exiting GateGPUCollimator_process\n";
                     
 					// timing - JB
 	                gettimeofday(&tv, NULL);
