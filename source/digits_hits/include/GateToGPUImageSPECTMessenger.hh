@@ -36,6 +36,7 @@ class GateToGPUImageSPECTMessenger : public GateOutputModuleMessenger
         G4UIcmdWithAnInteger      *cudaDeviceCmd;
 				G4UIcmdWithAnInteger      *cpuNumberCmd;
 				G4UIcmdWithABool          *cpuFlagCmd;
+        G4UIcmdWithABool          *juliaFlagCmd;
         G4UIcmdWithABool          *rootHitCmd;
         G4UIcmdWithABool          *rootSingleCmd;
         G4UIcmdWithABool          *rootSourceCmd;

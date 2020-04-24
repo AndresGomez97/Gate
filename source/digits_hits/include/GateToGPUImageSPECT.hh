@@ -109,6 +109,7 @@ class GateToGPUImageSPECT : public GateVOutputModule
         void SetCollimatorHeight( G4double );
         void SetSpaceBetweenCollimatorDetector( G4double );
         void SetRor( G4double );
+        void SetJuliaFlag( G4bool );
 
 	protected:
 		GateOutputMgr                    *m_outputMgr;
@@ -121,6 +122,7 @@ class GateToGPUImageSPECT : public GateVOutputModule
         G4int                             m_cudaDevice;
 				G4int                             m_cpuNumber;
 				G4bool                            m_cpuFlag;
+        G4bool                            m_juliaFlag;
         G4bool                            m_rootHitFlag;
         G4bool                            m_rootSingleFlag;
         G4bool                            m_rootSourceFlag;
@@ -210,5 +212,6 @@ extern void GateCPUCollimator_delete( GateCPUCollimator *in );
 // DEFINED IN GATECOLLIM_GPU.cu
 extern void GateGPUCollimator_init( GateGPUCollimator *in );
 extern void GateGPUCollimator_process( GateGPUCollimator *in, GateGPUParticle *particle );
+extern void GateJuliaCollimator_process( GateGPUCollimator *in, GateGPUParticle *particle );
 
 #endif

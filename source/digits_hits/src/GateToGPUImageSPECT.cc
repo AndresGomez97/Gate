@@ -42,7 +42,7 @@ m_gpuCollimator( NULL ), m_septa( 0.0 ), m_fy( 0.0 ), m_fz( 0.0 ),
 m_collimatorHeight( 0.0 ),
 m_spaceBetweenCollimatorDetector( 0.0 ), m_ror( 0.0 ),
 m_launchLastBuffer( false ), m_isAlreadyLaunchedBuffer( false ),
-m_elapsedTime( 0.0 ), m_gpuParticle( NULL )
+m_elapsedTime( 0.0 ), m_gpuParticle( NULL ), m_juliaFlag( false )
 {
 	GateVOutputModule::Enable( false ); // Keep this flag false: all output are disabled by default
 	m_messenger = new GateToGPUImageSPECTMessenger( this );
@@ -307,6 +307,11 @@ void GateToGPUImageSPECT::SetRor( G4double ror )
 	m_ror = ror;
 }
 
+void GateToGPUImageSPECT::SetJuliaFlag( G4bool flag )
+{
+	m_juliaFlag = flag;
+}
+
 void GateToGPUImageSPECT::RecordBeginOfAcquisition()
 {
 	if( nVerboseLevel > 1 )
@@ -439,7 +444,9 @@ void GateToGPUImageSPECT::RecordBeginOfAcquisition()
         m_fy, m_fz, m_collimatorHeight,
         m_spaceBetweenCollimatorDetector, m_centerOfPxlY, m_centerOfPxlZ,
         m_y_pixel_size, m_z_pixel_size, m_cudaDevice );
-				//GateGPUCollimator_init( m_gpuCollimator );
+				if (!m_juliaFlag){
+					GateGPUCollimator_init(m_gpuCollimator);
+				}
 		}
 		#endif
 
@@ -813,8 +820,15 @@ void GateToGPUImageSPECT::RecordStepWithVolume( const GateVVolume*,
 	                gettimeofday(&tv, NULL);
 	                start = tv.tv_sec + tv.tv_usec / 1000000.0;
 					if (nVerboseLevel > 0)
-
-					GateGPUCollimator_process( m_gpuCollimator, m_gpuParticle );
+						if (m_juliaFlag)
+						{
+							GateJuliaCollimator_process( m_gpuCollimator, m_gpuParticle );
+						}
+						else
+						{
+							GateGPUCollimator_process( m_gpuCollimator, m_gpuParticle );
+						}
+						
 					if(nVerboseLevel > 0)
                     
 					// timing - JB

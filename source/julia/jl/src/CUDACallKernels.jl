@@ -13,13 +13,16 @@ include("Structs.jl")
 # Context and module
 function ctx()
     ctx = CUDAnative.context()
-    md = CuModuleFile(joinpath(@__DIR__,"..","..","gpu","src","GateGPUManager.ptx"))
+    md = CuModuleFile(joinpath(@__DIR__,"..","..","..","gpu","src","GateGPUManager.ptx"))
     return md
 end
 
 #------------------------------------- GateCollim_gpu.cu -----------------------------------------
 # Cudacall kernel kernel_map_entry from GateCollim_gpu.cu
-function f_kernel_map_entry(px::Array{Float32},py::Array{Float32},pz::Array{Float32},entry_collim_y::Array{Float32},entry_collim_z::Array{Float32},hole::Array{Int32},y_size::UInt32,z_size::UInt32,particle_size::Int32,nBlocks::CuDim,nThreads::CuDim) 
+function f_kernel_map_entry(px::Array{Float32},py::Array{Float32},pz::Array{Float32},
+                            entry_collim_y::Array{Float32},entry_collim_z::Array{Float32},
+                            hole::Array{Int32},y_size::UInt32,z_size::UInt32,particle_size::Int32,
+                            nBlocks::CuDim,nThreads::CuDim) 
     md = ctx()
     kernel_map_entry = CuFunction(md,"kernel_map_entry")
 
@@ -35,10 +38,13 @@ function f_kernel_map_entry(px::Array{Float32},py::Array{Float32},pz::Array{Floa
 end
 
 # Cudacall kernel kernel_map_projection from GateCollim_gpu.cu
-function f_kernel_map_projection(px::Array{Float32},py::Array{Float32},pz::Array{Float32},dx::Array{Float32},dy::Array{Float32},dz::Array{Float32},hole::Array{Int32},planeToProject::Float32,particle_size::UInt32,nBlocks::CuDim,nThreads::CuDim)
+function f_kernel_map_projection(px::Array{Float32},py::Array{Float32},pz::Array{Float32},
+                                 dx::Array{Float32},dy::Array{Float32},dz::Array{Float32},
+                                 hole::Array{Int32},planeToProject::Float32,particle_size::Int32,
+                                 nBlocks::CuDim,nThreads::CuDim)
     md = ctx() 
     kernel_map_projection = CuFunction(md,"kernel_map_projection")
-    
+
     d_px = CuArray(px)
     d_py = CuArray(py)
     d_pz = CuArray(pz)
@@ -47,12 +53,15 @@ function f_kernel_map_projection(px::Array{Float32},py::Array{Float32},pz::Array
     d_dz = CuArray(dz)
     d_hole = CuArray(hole)
 
-    cudacall(kernel_map_projection,Tuple{CuPtr{Float32},CuPtr{Float32},CuPtr{Float32},CuPtr{Float32},CuPtr{Float32},CuPtr{Float32},CuPtr{Int32},Float32,UInt32}, d_px, d_py, d_pz, d_dx, d_dy, d_dz, d_hole, planeToProject,particle_size;blocks=nBlocks,threads=nThreads)
+    cudacall(kernel_map_projection,Tuple{CuPtr{Float32},CuPtr{Float32},CuPtr{Float32},CuPtr{Float32},CuPtr{Float32},CuPtr{Float32},CuPtr{Int32},Float32,UInt32}, d_px, d_py, d_pz, d_dx, d_dy, d_dz, d_hole, planeToProject,UInt32(particle_size);blocks=nBlocks,threads=nThreads)
     return (Array{Float32}(d_px),Array{Float32}(d_py),Array{Float32}(d_pz))
 end
 
 # Cudacall kernel kernel_map_exit from GateCollim_gpu.cu
-function f_kernel_map_exit(px::Array{Float32},py::Array{Float32},pz::Array{Float32},exit_collim_y::Array{Float32},exit_collim_z::Array{Float32},hole::Array{Int32},y_size::UInt32,z_size::UInt32,particle_size::Int32,nBlocks::CuDim,nThreads::CuDim)
+function f_kernel_map_exit(px::Array{Float32},py::Array{Float32},pz::Array{Float32},
+                           exit_collim_y::Array{Float32},exit_collim_z::Array{Float32},hole::Array{Int32},
+                           y_size::UInt32,z_size::UInt32,particle_size::Int32,
+                           nBlocks::CuDim,nThreads::CuDim)
     md = ctx()
     kernel_map_exit = CuFunction(md,"kernel_map_exit")
 
@@ -81,7 +90,9 @@ function f_kernel_brent_init(jlStackpart::JlStackParticle,nBlocks::CuDim,nThread
 end
 
 # Cudacall kernel kernel_voxelized_source_b2b from GateCommon_fun.cu
-function f_kernel_voxelized_source_b2b(g1::JlStackParticle, g2::JlStackParticle, act::JlActivities, E::Float32, size_in_vox::Int3, voxel_size::Float3, nBlocks::CuDim, nThreads::CuDim)
+function f_kernel_voxelized_source_b2b(g1::JlStackParticle, g2::JlStackParticle, act::JlActivities, 
+                                       E::Float32, size_in_vox::Int3, voxel_size::Float3, 
+                                       nBlocks::CuDim, nThreads::CuDim)
     md = ctx()
     kernel_voxelized_source_b2b = CuFunction(md,"kernel_voxelized_source_b2b")
     
@@ -93,7 +104,8 @@ function f_kernel_voxelized_source_b2b(g1::JlStackParticle, g2::JlStackParticle,
 end
 
 # Cudacall kernel kernel_NavRegularPhan_Photon_NoSec from GateCommon_fun.cu
-function f_kernel_NavRegularPhan_Photon_NoSec(photons::JlStackParticle, volume::JlVolume, materials::JlMaterials, count_d::Array{Int32}, nBlocks::CuDim, nThreads::CuDim)
+function f_kernel_NavRegularPhan_Photon_NoSec(photons::JlStackParticle, volume::JlVolume, materials::JlMaterials, 
+                                              count_d::Array{Int32}, nBlocks::CuDim, nThreads::CuDim)
     md = ctx()
     kernel_NavRegularPhan_Photon_NoSec = CuFunction(md,"kernel_NavRegularPhan_Photon_NoSec")
     
@@ -106,7 +118,9 @@ function f_kernel_NavRegularPhan_Photon_NoSec(photons::JlStackParticle, volume::
 end
 
 # Cudacall kernel kernel_NavHexaColli_Photon_NoSec from GateCommon_fun.cu
-function f_kernel_NavHexaColli_Photon_NoSec(photons::JlStackParticle, colli::Colli, centerOfHexagons::JlCoordHex2, materials::JlMaterials, count_d::Array{Int32}, nBlocks::CuDim, nThreads::CuDim)
+function f_kernel_NavHexaColli_Photon_NoSec(photons::JlStackParticle, colli::Colli, centerOfHexagons::JlCoordHex2, 
+                                            materials::JlMaterials, count_d::Array{Int32}, 
+                                            nBlocks::CuDim, nThreads::CuDim)
     md = ctx()
     kernel_NavHexaColli_Photon_NoSec = CuFunction(md,"kernel_NavHexaColli_Photon_NoSec")
 
@@ -119,7 +133,9 @@ function f_kernel_NavHexaColli_Photon_NoSec(photons::JlStackParticle, colli::Col
 end
 
 # Cudacall kernel kernel_NavRegularPhan_Photon_WiSec from GateCommon_fun.cu
-function f_kernel_NavRegularPhan_Photon_WiSec(photons::JlStackParticle, electrons::JlStackParticle, phantom::JlVolume, materials::JlMaterials, dosemap::JlDosimetry, count_d::Array{Int32}, step_limiter::Float32, nBlocks::CuDim, nThreads::CuDim)
+function f_kernel_NavRegularPhan_Photon_WiSec(photons::JlStackParticle, electrons::JlStackParticle, phantom::JlVolume, 
+                                              materials::JlMaterials, dosemap::JlDosimetry, count_d::Array{Int32}, 
+                                              step_limiter::Float32, nBlocks::CuDim, nThreads::CuDim)
     md = ctx()
     kernel_NavRegularPhan_Photon_WiSec = CuFunction(md,"kernel_NavRegularPhan_Photon_WiSec")
 
@@ -134,7 +150,9 @@ function f_kernel_NavRegularPhan_Photon_WiSec(photons::JlStackParticle, electron
 end
 
 # Cudacall kernel kernel_NavRegularPhan_Electron_BdPhoton from GateCommon_fun.cu
-function f_kernel_NavRegularPhan_Electron_BdPhoton(electrons::JlStackParticle, photons::JlStackParticle, phantom::JlVolume, materials::JlMaterials, dosemap::JlDosimetry, count_d::Array{Int32}, step_limiter::Float32, nBlocks::CuDim, nThreads::CuDim)
+function f_kernel_NavRegularPhan_Electron_BdPhoton(electrons::JlStackParticle, photons::JlStackParticle, phantom::JlVolume, 
+                                                   materials::JlMaterials, dosemap::JlDosimetry, count_d::Array{Int32}, 
+                                                   step_limiter::Float32, nBlocks::CuDim, nThreads::CuDim)
     md = ctx()
     kernel_NavRegularPhan_Electron_BdPhoton = CuFunction(md,"kernel_NavRegularPhan_Electron_BdPhoton")
     
@@ -152,7 +170,8 @@ end
 
 #--------------------------------------- GateOptical_fun.cu ------------------------------------------
 # Cudacall kernel kernel_optical_voxelized_source from GateOptical_fun.cu
-function f_kernel_optical_voxelized_source(photons::JlStackParticle, phantom_mat::JlVolume, phantom_act::Array{Float32}, phantom_ind::Array{UInt32}, E::Float32, nBlocks::CuDim, nThreads::CuDim)
+function f_kernel_optical_voxelized_source(photons::JlStackParticle, phantom_mat::JlVolume, phantom_act::Array{Float32}, 
+                                           phantom_ind::Array{UInt32}, E::Float32, nBlocks::CuDim, nThreads::CuDim)
     md = ctx()
     kernel_optical_voxelized_source = CuFunction(md,"kernel_optical_voxelized_source")
 
@@ -168,7 +187,8 @@ function f_kernel_optical_voxelized_source(photons::JlStackParticle, phantom_mat
 end
 
 # Cudacall kernel kernel_optical_navigation_regular from GateOptical_fun.cu
-function f_kernel_optical_navigation_regular(photons::JlStackParticle, phantom::JlVolume, count_d::Array{Int32}, nBlocks::CuDim, nThreads::CuDim)
+function f_kernel_optical_navigation_regular(photons::JlStackParticle, phantom::JlVolume, count_d::Array{Int32}, 
+                                             nBlocks::CuDim, nThreads::CuDim)
     md = ctx()
     kernel_optical_navigation_regular = CuFunction(md,"kernel_optical_navigation_regular")
 

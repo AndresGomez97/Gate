@@ -52,6 +52,11 @@ GateToGPUImageSPECTMessenger::GateToGPUImageSPECTMessenger( GateToGPUImageSPECT*
     cpuFlagCmd->SetGuidance( "Set the cpu flag" );
     cpuFlagCmd->SetParameterName( "cpu flag", false );
 
+    cmdName = GetDirectoryName() + "setJuliaflag";
+    juliaFlagCmd = new G4UIcmdWithABool( cmdName, this );
+    juliaFlagCmd->SetGuidance( "Set the julia flag" );
+    juliaFlagCmd->SetParameterName( "julia flag", false );
+
     cmdName = GetDirectoryName() + "setRootHitFlag";
     rootHitCmd = new G4UIcmdWithABool( cmdName, this );
     rootHitCmd->SetGuidance( "Set the root hit flag" );
@@ -154,6 +159,7 @@ GateToGPUImageSPECTMessenger::~GateToGPUImageSPECTMessenger()
 	delete rorCmd;
 	delete cpuNumberCmd;
 	delete cpuFlagCmd;
+    delete juliaFlagCmd;
 }
 
 void GateToGPUImageSPECTMessenger::SetNewValue( G4UIcommand* command,
@@ -173,6 +179,8 @@ void GateToGPUImageSPECTMessenger::SetNewValue( G4UIcommand* command,
 			m_gateToGPUImageSPECT->SetCpuNumber( cpuNumberCmd->GetNewIntValue( newValue ) );
 		else if( command == cpuFlagCmd )
 			m_gateToGPUImageSPECT->SetCpuFlag( cpuFlagCmd->GetNewBoolValue( newValue ) );
+        else if( command == juliaFlagCmd)
+            m_gateToGPUImageSPECT->SetJuliaFlag( juliaFlagCmd->GetNewBoolValue( newValue ) );
     else if( command == rootHitCmd )
         m_gateToGPUImageSPECT->SetRootHitFlag(
             rootHitCmd->GetNewBoolValue( newValue ) );
