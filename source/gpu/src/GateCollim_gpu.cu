@@ -1,28 +1,11 @@
 #include "GateGPUParticle.hh"
 #include "GateToGPUImageSPECT.hh"
+#include "embed_julia.hh"
 
 #include <dlfcn.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
-
-#include "julia.h"
-
-pthread_t tid; 
-pthread_mutex_t lock;
-
-struct ThreadArg{
-    GateGPUCollimator *collimator;
-    GateGPUParticle *particle;
-    int *hole;
-};
-
-struct RetProjection{
-    jl_array_t *px; 
-    jl_array_t *py; 
-    jl_array_t *pz;
-    jl_array_t *hole;
-};
 
 __device__ float vector_dot(float3 u, float3 v) {
     return u.x*v.x + u.y*v.y + u.z*v.z;
@@ -311,106 +294,51 @@ void GateJuliaCollimator_process(GateGPUCollimator *collimator, GateGPUParticle 
     unsigned int z_size     = collimator->z_size;
     float planeToProject    = collimator->planeToProject + particle->px[0];
 
-    // HANDLER FOR DLOPEN
-    void *handle;
+    void *handle = p_handle(); 
 
-    // Julia basic embedding
-    typedef void (*t_jl_init)(void);
-    typedef jl_value_t *(*t_jl_eval_string)(const char*);
-    typedef int (*t_jl_atexit_hook)(int);
+    t_jl_get_ptls_states jl_get_ptls_states = (t_jl_get_ptls_states)dlsym(p_handle(),"jl_get_ptls_states");
 
-    // Arrays
-    typedef jl_value_t *(*t_jl_apply_array_type)(jl_value_t*,size_t);
-    typedef jl_array_t *(*t_jl_ptr_to_array)(jl_value_t*, void*,size_t,int);
-
-    // Calling Julia methods
-    typedef jl_value_t *(*t_jl_get_global)(jl_module_t*, jl_sym_t*);
-    typedef jl_value_t *(*t_jl_call)(jl_function_t*, jl_value_t**,int32_t);
-    typedef jl_value_t *(*t_jl_call0)(jl_function_t*);
-    typedef jl_sym_t *(*t_jl_symbol)(const char*);
-
-    // Box and Unbox types
-    typedef jl_value_t *(*t_jl_box_uint32)(uint32_t);
-    typedef jl_value_t *(*t_jl_box_int32)(int32_t);
-    typedef jl_value_t *(*t_jl_box_int64)(int64_t);
-    typedef int64_t (*t_jl_unbox_int64)(jl_value_t*);
-    typedef jl_value_t *(*t_jl_box_float32)(float);
-
-    //push and pop GC
-    typedef jl_ptls_t (*t_jl_get_ptls_states)(void);
-
-    // LIBJULIA
-    handle = dlopen("/home/agmez/julia-1.3.1/lib/libjulia.so", RTLD_LAZY | RTLD_GLOBAL);
-    if (!handle) {
-    fprintf(stderr, "%s\n", dlerror());
-    exit(EXIT_FAILURE);
-    }
-
-    dlerror();
-
-    //CASTING METHODS FROM LIBJULIA
-    t_jl_init jl_init = (t_jl_init)dlsym(handle, "jl_init__threading");
-    t_jl_atexit_hook jl_atexit_hook= (t_jl_atexit_hook)dlsym(handle, "jl_atexit_hook");
-    t_jl_eval_string jl_eval_string = (t_jl_eval_string)dlsym(handle, "jl_eval_string");
-
-    t_jl_apply_array_type jl_apply_array_type = (t_jl_apply_array_type)dlsym(handle,"jl_apply_array_type");
-    t_jl_ptr_to_array jl_ptr_to_array_1d = (t_jl_ptr_to_array)dlsym(handle,"jl_ptr_to_array_1d");
-
-    t_jl_get_global jl_get_global = (t_jl_get_global)dlsym(handle,"jl_get_global");
-    t_jl_call jl_call = (t_jl_call)dlsym(handle,"jl_call");
-    t_jl_call0 jl_call0 = (t_jl_call0)dlsym(handle,"jl_call0");
-    t_jl_symbol jl_symbol = (t_jl_symbol)dlsym(handle,"jl_symbol");
-
-    t_jl_box_uint32 jl_box_uint32 = (t_jl_box_uint32)dlsym(handle,"jl_box_uint32");
-    t_jl_box_int32 jl_box_int32 = (t_jl_box_int32)dlsym(handle,"jl_box_int32");
-    t_jl_box_int64 jl_box_int64 = (t_jl_box_int64)dlsym(handle,"jl_box_int64");
-    t_jl_box_float32 jl_box_float32 = (t_jl_box_float32)dlsym(handle,"jl_box_float32");
-    t_jl_unbox_int64 jl_unbox_int64 = (t_jl_unbox_int64)dlsym(handle,"jl_unbox_int64");
-
-    t_jl_get_ptls_states jl_get_ptls_states = (t_jl_get_ptls_states)dlsym(handle,"jl_get_ptls_states");
-
-    
-    jl_init();
+    p_jl_init();
     
     jl_datatype_t *jl_float32_type = *(jl_datatype_t **)dlsym(handle, "jl_float32_type");
     jl_datatype_t *jl_int32_type = *(jl_datatype_t **)dlsym(handle,"jl_int32_type");
     
     // Include GateKernels.jl code
-    jl_eval_string("include(\"/home/agmez/gate/Gate/source/julia/jl/src/JuliaKernels.jl\")");
+    p_jl_eval_string("include(\"/home/agmez/gate/Gate/source/julia/jl/src/JuliaKernels.jl\")");
 
     // Array types for wrappers
-    jl_value_t *array_float32 = jl_apply_array_type((jl_value_t*)jl_float32_type, 1);
-    jl_value_t *array_int32 = jl_apply_array_type((jl_value_t*)jl_int32_type, 1);
+    jl_value_t *array_float32 = p_jl_apply_array_type((jl_value_t*)jl_float32_type, 1);
+    jl_value_t *array_int32 = p_jl_apply_array_type((jl_value_t*)jl_int32_type, 1);
     
     // Module
-    jl_module_t *juliaKernelsModule = (jl_module_t*)jl_eval_string("JuliaKernels");
+    jl_module_t *juliaKernelsModule = (jl_module_t*)p_jl_eval_string("JuliaKernels");
     
     // f_kernel_map_entry, f_kernel_map_projection and f_kernel_map_exit from Module GateKernels
     JL_GC_PUSH1(&juliaKernelsModule);
-    jl_function_t *call_all = (jl_function_t*)jl_get_global(juliaKernelsModule, jl_symbol("call_all"));
+    jl_function_t *call_all = (jl_function_t*)p_jl_get_global(juliaKernelsModule, p_jl_symbol("call_all"));
     JL_GC_POP();
 
     // Wrappers
     // px, py, pz
-    jl_array_t *jl_px = jl_ptr_to_array_1d(array_float32, particle->px, particle_size, 0);
-    jl_array_t *jl_py = jl_ptr_to_array_1d(array_float32, particle->py, particle_size, 0);
-    jl_array_t *jl_pz = jl_ptr_to_array_1d(array_float32, particle->pz, particle_size, 0);
+    jl_array_t *jl_px = p_jl_ptr_to_array_1d(array_float32, particle->px, particle_size, 0);
+    jl_array_t *jl_py = p_jl_ptr_to_array_1d(array_float32, particle->py, particle_size, 0);
+    jl_array_t *jl_pz = p_jl_ptr_to_array_1d(array_float32, particle->pz, particle_size, 0);
 
     // dx, dy, dz
-    jl_array_t *jl_dx = jl_ptr_to_array_1d(array_float32, particle->dx, particle_size, 0);
-    jl_array_t *jl_dy = jl_ptr_to_array_1d(array_float32, particle->dy, particle_size, 0);
-    jl_array_t *jl_dz = jl_ptr_to_array_1d(array_float32, particle->dz, particle_size, 0);
+    jl_array_t *jl_dx = p_jl_ptr_to_array_1d(array_float32, particle->dx, particle_size, 0);
+    jl_array_t *jl_dy = p_jl_ptr_to_array_1d(array_float32, particle->dy, particle_size, 0);
+    jl_array_t *jl_dz = p_jl_ptr_to_array_1d(array_float32, particle->dz, particle_size, 0);
 
     // entry_collim_y entry_collim_z
-    jl_array_t *jl_entry_collim_y = jl_ptr_to_array_1d(array_float32, collimator->entry_collim_y, y_size, 0);
-    jl_array_t *jl_entry_collim_z = jl_ptr_to_array_1d(array_float32, collimator->entry_collim_z, z_size, 0);
+    jl_array_t *jl_entry_collim_y = p_jl_ptr_to_array_1d(array_float32, collimator->entry_collim_y, y_size, 0);
+    jl_array_t *jl_entry_collim_z = p_jl_ptr_to_array_1d(array_float32, collimator->entry_collim_z, z_size, 0);
     
     // exit_collim_y exit_collim_z
-    jl_array_t *jl_exit_collim_y = jl_ptr_to_array_1d(array_float32, collimator->exit_collim_y, y_size, 0);
-    jl_array_t *jl_exit_collim_z = jl_ptr_to_array_1d(array_float32, collimator->exit_collim_z, z_size, 0);
+    jl_array_t *jl_exit_collim_y = p_jl_ptr_to_array_1d(array_float32, collimator->exit_collim_y, y_size, 0);
+    jl_array_t *jl_exit_collim_z = p_jl_ptr_to_array_1d(array_float32, collimator->exit_collim_z, z_size, 0);
 
     // hole
-    jl_array_t *jl_hole = jl_ptr_to_array_1d(array_int32, hole, particle_size, 0);
+    jl_array_t *jl_hole = p_jl_ptr_to_array_1d(array_int32, hole, particle_size, 0);
 
     // Args call_all
     jl_value_t **args;
@@ -426,15 +354,15 @@ void GateJuliaCollimator_process(GateGPUCollimator *collimator, GateGPUParticle 
     args[8] = (jl_value_t*)jl_exit_collim_y;
     args[9] = (jl_value_t*)jl_exit_collim_z;
     args[10] = (jl_value_t*)jl_hole;
-    args[11] = jl_box_uint32(y_size);
-    args[12] = jl_box_uint32(z_size);
-    args[13] = jl_box_float32(planeToProject);
-    args[14] = jl_box_int32(particle_size);
-    args[15] = jl_box_int32(grid_size);
-    args[16] = jl_box_int32(block_size);
+    args[11] = p_jl_box_uint32(y_size);
+    args[12] = p_jl_box_uint32(z_size);
+    args[13] = p_jl_box_float32(planeToProject);
+    args[14] = p_jl_box_int32(particle_size);
+    args[15] = p_jl_box_int32(grid_size);
+    args[16] = p_jl_box_int32(block_size);
     
     // Call call_all
-    struct RetProjection *retproj = (RetProjection *)jl_call(call_all,args,17);
+    struct RetProjection *retproj = (RetProjection *)p_jl_call(call_all,args,17);
 
     // Accessing result data
     hole = (int*)jl_array_data(retproj->hole);
@@ -444,7 +372,7 @@ void GateJuliaCollimator_process(GateGPUCollimator *collimator, GateGPUParticle 
     particle->pz = (float*)jl_array_data(retproj->pz);
 
     JL_GC_POP();
-    jl_atexit_hook(0);
+    p_jl_atexit_hook(0);
 
     // Pack data to CPU
     int c = 0;

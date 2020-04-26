@@ -228,17 +228,6 @@ FILE(GLOB headers
   ${PROJECT_SOURCE_DIR}/source/julia/include/*.hh)
 
 #=========================================================
-# JULIA
-#IF(GATE_USE_JULIA)
-  #SET(JL_SHARE "$(shell julia -e 'print(joinpath(Sys.BINDIR, Base.DATAROOTDIR, "julia"))')")
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-SET(JULIA_LIBRARIES "/home/agmez/julia-1.3.1/lib")
-SET(JULIA_LIBRARY "-L'${JULIA_LIBRARIES}' -Wl,-rpath,'${JULIA_LIBRARIES}' -Wl,-rpath,'${JULIA_LIBRARIES}/julia' -ljulia")
-#  INCLUDE_DIRECTORIES("/home/agmez/julia-1.3.1/include/julia")
-SET(LINK_DIRECTORIES "-Wl,-rpath,'${JULIA_LIBRARIES}' -Wl,-rpath,'${JULIA_LIBRARIES}/julia' -ljulia")
-#ENDIF()
-
-#=========================================================
 # RTK
 IF(GATE_USE_RTK OR GATE_USE_ITK)
   SET(ITK_MINIMAL_VERSION 4.9)
