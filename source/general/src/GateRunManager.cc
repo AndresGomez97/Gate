@@ -11,6 +11,7 @@
 #include "GateDetectorConstruction.hh"
 #include "GateRunManagerMessenger.hh"
 #include "GateHounsfieldToMaterialsBuilder.hh"
+#include "JuliaThreadMgr.hh"
 
 #include "G4StateManager.hh"
 #include "G4UImanager.hh"
@@ -22,7 +23,7 @@
 #include "G4Region.hh"
 #include "G4LossTableManager.hh"
 #include "G4EmStandardPhysics.hh"
-#include "julia.h"
+
 #include <dlfcn.h>
 #include <string>
 
@@ -80,6 +81,10 @@ void GateRunManager::InitializeAll()
   // We call the PurgeIfFictitious method to delete the gamma related processes
   // that the user defined if the fictitiousProcess is called.
   GatePhysicsList::GetInstance()->PurgeIfFictitious();
+
+   // Initializing Julia and compiling julia files
+  GateMessage("Core", 0, "Initialization of julia\n");
+  JuliaMgr::GetInstance();
 
   // Get the build-in physic list if the user ask for it
   // Note the EM-only physic lists has already been build in GatePhysicsList
@@ -233,83 +238,8 @@ void GateRunManager::RunInitialization()
 
 
 //----------------------------------------------------------------------------------------
-void GateRunManager::JuliaTest()
+void GateRunManager::JuliaREPL()
 {
-
-  //CALLING JULIA CODE WITH CUDA PACKAGES
-  void *handle;
-  typedef void (*t_jl_init)(void);
-  typedef jl_value_t *(*t_jl_eval_string)(const char*);
-  typedef int (*t_jl_atexit_hook)(int);
-  typedef double (*t_jl_unbox_float64)(jl_value_t*);
-
-  //DLOPEN LIBJULIA
-  handle = dlopen("/home/agmez/julia-1.3.1/lib/libjulia.so", RTLD_LAZY | RTLD_GLOBAL);
-  if (!handle) {
-    fprintf(stderr, "%s\n", dlerror());
-    exit(EXIT_FAILURE);
-  }
-
-  dlerror();
-
-  //ACCESSING LIBJULIA METHODS
-  t_jl_init jl_init = (t_jl_init)dlsym(handle, "jl_init__threading");
-  t_jl_atexit_hook jl_atexit_hook= (t_jl_atexit_hook)dlsym(handle, "jl_atexit_hook");
-  t_jl_eval_string jl_eval_string = (t_jl_eval_string)dlsym(handle, "jl_eval_string");
-  t_jl_unbox_float64 jl_unbox_float64= (t_jl_unbox_float64)dlsym(handle,"jl_unbox_float64");
-
-  dlerror();
-
-  jl_init();
-
-  jl_value_t *ret = jl_eval_string("sqrt(2.0)");
-
-  double ret_unboxed = jl_unbox_float64(ret);
-  printf("sqrt(2.0) in C: %e \n", ret_unboxed);
-
-  jl_atexit_hook(0);
-}
-//----------------------------------------------------------------------------------------
-
-//----------------------------------------------------------------------------------------
-void GateRunManager::JuliaREPL(G4String juliacode)
-{
-  //CALLING JULIA CODE WITH CUDA PACKAGES
-  void *handle;
-  typedef void (*t_jl_init)(void);
-  typedef jl_value_t *(*t_jl_eval_string)(const char*);
-  typedef int (*t_jl_atexit_hook)(int);
-  typedef jl_value_t *(*t_jl_exception_occurred)(void);
-  typedef const char *(*t_jl_typeof_str)(jl_value_t *);
-  typedef const char *(*t_jl_string_ptr)(jl_value_t*);
-
-  //DLOPEN LIBJULIA
-  handle = dlopen("/home/agmez/julia-1.3.1/lib/libjulia.so", RTLD_LAZY | RTLD_GLOBAL);
-  if (!handle) {
-    fprintf(stderr, "%s\n", dlerror());
-    exit(EXIT_FAILURE);
-  }
-
-  dlerror();
-
-  //ACCESSING LIBJULIA METHODS
-  t_jl_init jl_init = (t_jl_init)dlsym(handle, "jl_init__threading");
-  t_jl_atexit_hook jl_atexit_hook= (t_jl_atexit_hook)dlsym(handle, "jl_atexit_hook");
-  t_jl_eval_string jl_eval_string = (t_jl_eval_string)dlsym(handle, "jl_eval_string");
-  t_jl_exception_occurred jl_exception_occurred = (t_jl_exception_occurred)dlsym(handle,"jl_exception_occurred");
-  t_jl_typeof_str jl_typeof_str = (t_jl_typeof_str)dlsym(handle, "jl_typeof_str");
-  t_jl_string_ptr jl_string_ptr = (t_jl_string_ptr)dlsym(handle, "jl_string_ptr");
-
-  dlerror();
-
-  jl_init();
-
-  jl_eval_string("include(\"../../../source/julia/jl/async.jl\")");
-
-  if (jl_exception_occurred()){
-  	printf("%s \n", jl_typeof_str(jl_exception_occurred()));
-  }
-
-  jl_atexit_hook(0);
+  JuliaMgr::GetInstance().run([] { p_jl_eval_string("println(\"JULIA REPL\")"); });
 }
 //----------------------------------------------------------------------------------------

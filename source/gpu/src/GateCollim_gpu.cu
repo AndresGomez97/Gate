@@ -1,6 +1,6 @@
 #include "GateGPUParticle.hh"
 #include "GateToGPUImageSPECT.hh"
-#include "embed_julia.hh"
+#include "EmbedJulia.hh"
 
 #include <dlfcn.h>
 #include <stdlib.h>
@@ -296,15 +296,10 @@ void GateJuliaCollimator_process(GateGPUCollimator *collimator, GateGPUParticle 
 
     void *handle = p_handle(); 
 
-    t_jl_get_ptls_states jl_get_ptls_states = (t_jl_get_ptls_states)dlsym(p_handle(),"jl_get_ptls_states");
+    t_jl_get_ptls_states jl_get_ptls_states = (t_jl_get_ptls_states)dlsym(handle,"jl_get_ptls_states");
 
-    p_jl_init();
-    
     jl_datatype_t *jl_float32_type = *(jl_datatype_t **)dlsym(handle, "jl_float32_type");
     jl_datatype_t *jl_int32_type = *(jl_datatype_t **)dlsym(handle,"jl_int32_type");
-    
-    // Include GateKernels.jl code
-    p_jl_eval_string("include(\"/home/agmez/gate/Gate/source/julia/jl/src/JuliaKernels.jl\")");
 
     // Array types for wrappers
     jl_value_t *array_float32 = p_jl_apply_array_type((jl_value_t*)jl_float32_type, 1);
@@ -372,7 +367,6 @@ void GateJuliaCollimator_process(GateGPUCollimator *collimator, GateGPUParticle 
     particle->pz = (float*)jl_array_data(retproj->pz);
 
     JL_GC_POP();
-    p_jl_atexit_hook(0);
 
     // Pack data to CPU
     int c = 0;

@@ -6,7 +6,6 @@
 
 #include "julia.h"
 
-
 // typedefs for casting methods from libjulia.so
 // Julia basic embedding
 typedef void (*t_jl_init)(void);

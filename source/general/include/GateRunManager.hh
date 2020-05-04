@@ -58,10 +58,8 @@ public:
   //! Overload of G4RunManager()::RunInitialisation() that resets the geometry navigator
   void RunInitialization();
 
-  //! Method to test that Julia is callable from gate commands
-  void JuliaTest();
   //! Initialize Julia REPL
-  void JuliaREPL(G4String juliacode);
+  void JuliaREPL();
 
   //! Return the instance of the run manager
   static GateRunManager* GetRunManager()

@@ -2,7 +2,7 @@
 #include <dlfcn.h>
 
 #include "julia.h"
-#include "embed_julia.hh"
+#include "EmbedJulia.hh"
 
 void *p_handle(void){
     void *handle = dlopen("/home/agmez/julia-1.3.1/lib/libjulia.so", RTLD_LAZY | RTLD_GLOBAL); 

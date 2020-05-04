@@ -28,7 +28,7 @@
 #include <cstddef>
 #include <sys/time.h>
 #include "GateMiscFunctions.hh"
-
+#include "JuliaThreadMgr.hh"
 
 GateToGPUImageSPECT::GateToGPUImageSPECT( const G4String& name,
     GateOutputMgr *outputMgr, GateVSystem* itsSystem, DigiMode digiMode )
@@ -822,7 +822,7 @@ void GateToGPUImageSPECT::RecordStepWithVolume( const GateVVolume*,
 					if (nVerboseLevel > 0)
 						if (m_juliaFlag)
 						{
-							GateJuliaCollimator_process( m_gpuCollimator, m_gpuParticle );
+							JuliaMgr::GetInstance().run([&] { GateJuliaCollimator_process( m_gpuCollimator, m_gpuParticle ); });
 						}
 						else
 						{
