@@ -34,6 +34,11 @@ jl_array_t *p_jl_ptr_to_array_1d(jl_value_t *atype, void *data, size_t nel, int 
     return jl_ptr_to_array_1d(atype,data,nel,ownbuffer);
 }
 
+jl_array_t *p_jl_alloc_array_1d(jl_value_t *atype, size_t nr){
+    t_jl_alloc_array_1d jl_alloc_array_1d = (t_jl_alloc_array_1d)dlsym(p_handle(),"jl_alloc_array_1d");
+    return jl_alloc_array_1d(atype,nr);
+}
+
 jl_value_t *p_jl_get_global(jl_module_t *m, jl_sym_t *var){
     t_jl_get_global jl_get_global = (t_jl_get_global)dlsym(p_handle(),"jl_get_global");
     return jl_get_global(m,var);

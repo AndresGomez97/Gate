@@ -15,6 +15,7 @@ typedef int (*t_jl_atexit_hook)(int);
 // Arrays
 typedef jl_value_t *(*t_jl_apply_array_type)(jl_value_t*,size_t);
 typedef jl_array_t *(*t_jl_ptr_to_array)(jl_value_t*, void*,size_t,int);
+typedef jl_array_t *(*t_jl_alloc_array_1d)(jl_value_t*, size_t);
 
 // Calling Julia methods
 typedef jl_value_t *(*t_jl_get_global)(jl_module_t*, jl_sym_t*);
@@ -49,6 +50,7 @@ jl_value_t *p_jl_eval_string(const char *v);
 // Arrays
 jl_value_t *p_jl_apply_array_type(jl_value_t *type,size_t dim);
 jl_array_t *p_jl_ptr_to_array_1d(jl_value_t *atype, void *data, size_t nel, int ownbuffer);
+jl_array_t *p_jl_alloc_array_1d(jl_value_t *atype, size_t nr);
 
 // Calling Julia methods
 jl_value_t *p_jl_get_global(jl_module_t *m, jl_sym_t *var);

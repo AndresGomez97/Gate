@@ -475,8 +475,8 @@ void GateToGPUImageSPECT::RecordEndOfAcquisition()
 		{
 			if( nVerboseLevel>0 )
 				G4cout << "Deleting GPU collimator...\n";
-
-    	GateGPUCollimator_delete( m_gpuCollimator );
+    	
+		GateGPUCollimator_delete( m_gpuCollimator );
     	GateGPUParticle_delete( m_gpuParticle );
 		}
 
