@@ -354,7 +354,7 @@ void GateJuliaCollimator_process(GateGPUCollimator *collimator, GateGPUParticle 
         args[14] = p_jl_box_int32(particle_size);
         args[15] = p_jl_box_int32(grid_size);
         args[16] = p_jl_box_int32(block_size);
-
+        
         // Call call_all
         struct RetProjection *retproj = (RetProjection *)p_jl_call(call_all,args,17);
 

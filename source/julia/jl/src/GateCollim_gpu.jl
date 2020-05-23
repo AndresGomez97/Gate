@@ -31,41 +31,36 @@ function binary_search(position::Float32,tab,endIdx::UInt32)
     return medIdx-1
 end
 
+# Check if there is in col bounds
+function is_in(point,col)
+    return point > col[1] || point < col[end]
+end
 
 # Kernel kernel_map_entry from GateCollim_gpu.cu
-function kernel_map_entry(d_px,d_py,d_pz,
+function kernel_map_entry(d_py,d_pz,
                           d_entry_collim_y,d_entry_collim_z,d_hole,
-                          y_size::UInt32,z_size::UInt32,particle_size::Int32)
+                          size_y::UInt32,size_z::UInt32,particle_size::Int32)
     
     id = (blockIdx().x-1) * blockDim().x + threadIdx().x
     if id > particle_size 
         return
-    end
-    if d_py[id] > d_entry_collim_y[1] || d_py[id] < d_entry_collim_y[y_size]
-        d_hole[id] = -1
-        return
-    end
-    if d_pz[id] > d_entry_collim_z[1] || d_pz[id] < d_entry_collim_z[z_size]
+    elseif is_in(d_py[id], d_entry_collim_y) || is_in(d_pz[id], d_entry_collim_z)
         d_hole[id] = -1
         return
     end
     
-    index_entry_y = binary_search(d_py[id],d_entry_collim_y,y_size)
-    index_entry_z = binary_search(d_pz[id],d_entry_collim_z,z_size)
-
-    is_in_hole_y = index_entry_y % 2 == 0 
-    is_in_hole_z = index_entry_z % 2 == 0  
+    index_entry_y = binary_search(d_py[id],d_entry_collim_y,size_y)
+    index_entry_z = binary_search(d_pz[id],d_entry_collim_z,size_z)
     
-    d_hole[id] = is_in_hole_y && is_in_hole_z ? index_entry_y * z_size + index_entry_z : -1
+    d_hole[id] = iseven(index_entry_y) && iseven(index_entry_z) ? index_entry_y * size_z + index_entry_z : -1
     return
 end
 
 # Kernel kernel_map_projection from GateCollim_gpu.cu
-function kernel_map_projection(d_px,d_py,d_pz,
-                               d_dx,d_dy,d_dz,
-                               d_hole,planeToProject::Float32,particle_size::Int32)
+function kernel_map_projection(d_px, d_py, d_pz, d_dx, d_dy, d_dz, d_hole, planeToProject, particle_size)
     
     id = (blockIdx().x-1) * blockDim().x + threadIdx().x
+    
     if id > particle_size || d_hole[id] == -1
         return 
     end
@@ -74,46 +69,35 @@ function kernel_map_projection(d_px,d_py,d_pz,
     v0 = Float3(planeToProject, 0.0, 0.0)
     d = Float3(d_dx[id], d_dy[id], d_dz[id])
     p = Float3(d_px[id], d_py[id], d_pz[id])
-    
     s = vector_dot(n, vector_sub(v0, p)) / vector_dot(n, d)
     newp = vector_add(p, vector_mag(d, s))
-
     d_px[id] = newp.x
     d_py[id] = newp.y
     d_pz[id] = newp.z
-    return 
+    return
 end
 
 # Kernel kernel_map_exit from GateCollim_gpu.cu
-function kernel_map_exit(d_px,d_py,d_pz,
+function kernel_map_exit(d_py,d_pz,
                          d_exit_collim_y,d_exit_collim_z,d_hole,
-                         y_size::UInt32,z_size::UInt32,particle_size::Int32)
+                         size_y::UInt32,size_z::UInt32,particle_size::Int32)
 
     id = (blockIdx().x-1) * blockDim().x + threadIdx().x
+
     if id > particle_size || d_hole[id] == -1
         return
-    end
-    if d_py[id] > d_exit_collim_y[1] || d_py[id] < d_exit_collim_y[y_size]
-        d_hole[id] = -1
-        return 
-    end
-    if d_pz[id] > d_exit_collim_z[1] || d_pz[id] < d_exit_collim_z[z_size]
+    elseif is_in(d_py[id], d_exit_collim_y) || is_in(d_pz[id], d_exit_collim_z)
         d_hole[id] = -1
         return 
     end
 
-    index_exit_y = binary_search(d_py[id],d_exit_collim_y,y_size)
-    index_exit_z = binary_search(d_pz[id],d_exit_collim_z,z_size)
+    index_exit_y = binary_search(d_py[id],d_exit_collim_y,size_y)
+    index_exit_z = binary_search(d_pz[id],d_exit_collim_z,size_z)
 
-    is_in_hole_y = index_exit_y % 2 == 0
-    is_in_hole_z = index_exit_z % 2 == 0
-
-    newhole = is_in_hole_y && is_in_hole_z ? index_exit_y * z_size + index_exit_z : -1
-
-    if newhole == -1 || newhole != d_hole[id]
+    if isodd(index_exit_y) || isodd(index_exit_z) || d_hole[id] != index_exit_y * size_z + index_exit_z
         d_hole[id] = -1
         return
-    end    
+    end   
 end
 #-----------------------------------------------------------------------------------------------
 
@@ -123,24 +107,25 @@ function call_all(px::Array{Float32},py::Array{Float32},pz::Array{Float32},
                   dx::Array{Float32},dy::Array{Float32},dz::Array{Float32},
                   entry_collim_y::Array{Float32},entry_collim_z::Array{Float32},
                   exit_collim_y::Array{Float32},exit_collim_z::Array{Float32},
-                  hole::Array{Int32},y_size::UInt32,z_size::UInt32,planeToProject::Float32,
+                  hole::Array{Int32},size_y::UInt32,size_z::UInt32,planeToProject::Float32,
                   particle_size::Int32,nBlocks::CuDim,nThreads::CuDim)
     
     d_px = CuArray(px)
-    d_py = CuArray(py)
-    d_pz = CuArray(pz)
+    d_py = CuArray(py) 
+    d_pz = CuArray(pz) 
     d_dx = CuArray(dx)
     d_dy = CuArray(dy)
     d_dz = CuArray(dz)
-    d_hole = CuArray(hole)
+    d_hole = CuArray(hole) 
     d_entry_collim_y = CuArray(entry_collim_y)
     d_entry_collim_z = CuArray(entry_collim_z)
     d_exit_collim_y = CuArray(exit_collim_y)
-    d_exit_collim_z = CuArray(exit_collim_z)
+    d_exit_collim_z = CuArray(exit_collim_z) 
 
-    @cuda blocks=nBlocks threads=nThreads kernel_map_entry(d_px, d_py, d_pz, d_entry_collim_y, d_entry_collim_z, d_hole, y_size, z_size, particle_size)
+    @cuda blocks=nBlocks threads=nThreads kernel_map_entry(d_py, d_pz, d_entry_collim_y, d_entry_collim_z, d_hole, size_y, size_z, particle_size)
     @cuda blocks=nBlocks threads=nThreads kernel_map_projection(d_px, d_py, d_pz, d_dx, d_dy, d_dz, d_hole, planeToProject, particle_size)
-    @cuda blocks=nBlocks threads=nThreads kernel_map_exit(d_px, d_py, d_pz, d_exit_collim_y, d_exit_collim_z, d_hole, y_size, z_size, particle_size)
+    @cuda blocks=nBlocks threads=nThreads kernel_map_exit(d_py, d_pz, d_exit_collim_y, d_exit_collim_z, d_hole, size_y, size_z, particle_size)
+    
     return (Array{Float32}(d_px),Array{Float32}(d_py),Array{Float32}(d_pz),Array{Int32}(d_hole))
 end
 
@@ -155,8 +140,8 @@ function call_entry(px::Array{Float32},py::Array{Float32},pz::Array{Float32},
     d_hole = CuArray(hole)
     d_entry_collim_y = CuArray(entry_collim_y)
     d_entry_collim_z = CuArray(entry_collim_z) 
-    
-    @cuda blocks=nBlocks threads=nThreads kernel_map_entry(d_px, d_py, d_pz, d_entry_collim_y, d_entry_collim_z, d_hole, y_size, z_size, particle_size)
+
+    @cuda blocks=nBlocks threads=nThreads kernel_map_entry(d_py, d_pz, d_entry_collim_y, d_entry_collim_z, d_hole, y_size, z_size, particle_size)
     return Array{Int32}(d_hole)
 end
 
@@ -188,7 +173,7 @@ function call_exit(px::Array{Float32},py::Array{Float32},pz::Array{Float32},
     d_exit_collim_y = CuArray(exit_collim_y)
     d_exit_collim_z = CuArray(exit_collim_z) 
 
-    @cuda blocks=nBlocks threads=nThreads kernel_map_exit(d_px, d_py, d_pz, d_exit_collim_y, d_exit_collim_z, d_hole, y_size, z_size, particle_size)
+    @cuda blocks=nBlocks threads=nThreads kernel_map_exit(d_py, d_pz, d_exit_collim_y, d_exit_collim_z, d_hole, y_size, z_size, particle_size)
     return Array{Int32}(d_hole)
 end
 
