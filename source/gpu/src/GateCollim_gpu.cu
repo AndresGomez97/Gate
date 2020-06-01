@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <cudaProfiler.h>
+#include <nvToolsExt.h>
 
 __device__ float vector_dot(float3 u, float3 v) {
     return u.x*v.x + u.y*v.y + u.z*v.z;
@@ -136,9 +138,9 @@ extern "C" {
 }
 
 void GateGPUCollimator_init(GateGPUCollimator *collimator) {
-
+    cuProfilerStart();
     cudaSetDevice(collimator->cudaDeviceID);
-
+    
     unsigned int y_size = collimator->y_size;
     unsigned int z_size = collimator->z_size;
 
@@ -150,7 +152,7 @@ void GateGPUCollimator_init(GateGPUCollimator *collimator) {
     float* d_entry_collim_z;
     float* d_exit_collim_y;
     float* d_exit_collim_z;
-    
+    nvtxRangePush("Collimator HostToDevice");
     cudaMalloc((void**) &d_entry_collim_y, mem_float_y);
     cudaMalloc((void**) &d_entry_collim_z, mem_float_z);
     cudaMalloc((void**) &d_exit_collim_y, mem_float_y);
@@ -160,15 +162,16 @@ void GateGPUCollimator_init(GateGPUCollimator *collimator) {
     cudaMemcpy(d_entry_collim_z, collimator->entry_collim_z, mem_float_z, cudaMemcpyHostToDevice);
     cudaMemcpy(d_exit_collim_y, collimator->exit_collim_y, mem_float_y, cudaMemcpyHostToDevice);
     cudaMemcpy(d_exit_collim_z, collimator->exit_collim_z, mem_float_z, cudaMemcpyHostToDevice);
-
+    
     collimator->gpu_entry_collim_y = d_entry_collim_y;
     collimator->gpu_entry_collim_z = d_entry_collim_z;
     collimator->gpu_exit_collim_y = d_exit_collim_y;
     collimator->gpu_exit_collim_z = d_exit_collim_z;
+    nvtxRangePop();
 }
 
 void GateGPUCollimator_process(GateGPUCollimator *collimator, GateGPUParticle *particle) {
-
+    nvtxRangePush("Collimator");
     cudaSetDevice(collimator->cudaDeviceID);
 
     // Read collimator geometry
@@ -188,6 +191,9 @@ void GateGPUCollimator_process(GateGPUCollimator *collimator, GateGPUParticle *p
     float *d_px, *d_py, *d_pz;
     float *d_dx, *d_dy, *d_dz;
     int *d_hole;
+    // Array of holes :)
+    int *h_hole = (int*)malloc(mem_int_hole);
+    nvtxRangePush("Particle HostToDevice");
     cudaMalloc((void**) &d_px, mem_float_particle);
     cudaMalloc((void**) &d_py, mem_float_particle);
     cudaMalloc((void**) &d_pz, mem_float_particle);
@@ -196,9 +202,6 @@ void GateGPUCollimator_process(GateGPUCollimator *collimator, GateGPUParticle *p
     cudaMalloc((void**) &d_dz, mem_float_particle);
     cudaMalloc((void**) &d_hole, mem_int_hole);
 
-    // Array of holes :)
-    int *h_hole = (int*)malloc(mem_int_hole);
-
     // Copy particles from host to device
     cudaMemcpy(d_px, particle->px, mem_float_particle, cudaMemcpyHostToDevice);
     cudaMemcpy(d_py, particle->py, mem_float_particle, cudaMemcpyHostToDevice);
@@ -206,37 +209,40 @@ void GateGPUCollimator_process(GateGPUCollimator *collimator, GateGPUParticle *p
     cudaMemcpy(d_dx, particle->dx, mem_float_particle, cudaMemcpyHostToDevice);
     cudaMemcpy(d_dy, particle->dy, mem_float_particle, cudaMemcpyHostToDevice);
     cudaMemcpy(d_dz, particle->dz, mem_float_particle, cudaMemcpyHostToDevice);
-
+    nvtxRangePop();
     // Kernel vars
     dim3 threads, grid;
     int block_size = 512;
     int grid_size = (particle_size + block_size - 1) / block_size;
     threads.x = block_size;
     grid.x = grid_size;
-
+    nvtxRangePush("kernel_map_entry");
     // Kernel map entry
     kernel_map_entry<<<grid, threads>>>(d_px, d_py, d_pz, 
                                         d_entry_collim_y, d_entry_collim_z,
                                         d_hole, y_size, z_size,
                                         particle_size);
-
+    nvtxRangePop();
+    nvtxRangePush("kernel_map_projection"); 
     // Kernel projection
     kernel_map_projection<<<grid, threads>>>(d_px, d_py, d_pz,
                                              d_dx, d_dy, d_dz,
                                              d_hole, planeToProject, particle_size);
-
+    nvtxRangePop();
+    nvtxRangePush("kernel_map_exit");     
     // Kernel map_exit
     kernel_map_exit<<<grid, threads>>>(d_px, d_py, d_pz,
                                        d_exit_collim_y, d_exit_collim_z,
                                        d_hole, y_size, z_size,
                                        particle_size);
-    
+    nvtxRangePop();
     // Copy particles from device to host
+    nvtxRangePush("DeviceToHost"); 
     cudaMemcpy(particle->px, d_px, mem_float_particle, cudaMemcpyDeviceToHost);
     cudaMemcpy(particle->py, d_py, mem_float_particle, cudaMemcpyDeviceToHost);
     cudaMemcpy(particle->pz, d_pz, mem_float_particle, cudaMemcpyDeviceToHost);
     cudaMemcpy(h_hole, d_hole, mem_int_hole, cudaMemcpyDeviceToHost);
-
+    nvtxRangePop();
     // Pack data to CPU
     int c = 0;
     int i = 0;
@@ -264,7 +270,7 @@ void GateGPUCollimator_process(GateGPUCollimator *collimator, GateGPUParticle *p
         ++i;
     }
     particle->size = c;    
-
+    nvtxRangePush("cudaFree");
     // Free memory
     cudaFree(d_px);
     cudaFree(d_py);
@@ -275,15 +281,20 @@ void GateGPUCollimator_process(GateGPUCollimator *collimator, GateGPUParticle *p
     cudaFree(d_hole);
 
     free(h_hole);
+    nvtxRangePop();
+    nvtxRangePop();
+    cuProfilerStop();
 }
 
 void GateJuliaCollimator_process(GateGPUCollimator *collimator, GateGPUParticle *particle) {
-
+    
+    //cuProfilerStart();
+    //nvtxRangePush("Collimator");
     // Particles allocation to the Device
     int particle_size = particle-> size;
 
     if(particle_size>0){
-
+        
         // Kernel vars
         int block_size = 512;
         int grid_size = (particle_size + block_size - 1) / block_size;
@@ -293,8 +304,13 @@ void GateJuliaCollimator_process(GateGPUCollimator *collimator, GateGPUParticle 
         unsigned int z_size     = collimator->z_size;
         float planeToProject    = collimator->planeToProject + particle->px[0];
 
-        void *handle = p_handle(); 
+        // Alloc 
+        int *h_hole = (int*)malloc(particle_size * sizeof(int));
 
+        //nvtxRangePush("libjulia");
+        void *handle = p_handle(); 
+        //nvtxRangePop();
+        //nvtxRangePush("array types");
         t_jl_get_ptls_states jl_get_ptls_states = (t_jl_get_ptls_states)dlsym(handle,"jl_get_ptls_states");
 
         jl_datatype_t *jl_float32_type = *(jl_datatype_t **)dlsym(handle, "jl_float32_type");
@@ -303,21 +319,24 @@ void GateJuliaCollimator_process(GateGPUCollimator *collimator, GateGPUParticle 
         // Array types for wrappers
         jl_value_t *array_float32 = p_jl_apply_array_type((jl_value_t*)jl_float32_type, 1);
         jl_value_t *array_int32 = p_jl_apply_array_type((jl_value_t*)jl_int32_type, 1);
-
+        //nvtxRangePop();
         // Module
+        //nvtxRangePush("module JuliaKernels");
         jl_module_t *juliaKernelsModule = (jl_module_t*)p_jl_eval_string("JuliaKernels");
-
+        //nvtxRangePop();
         // f_kernel_map_entry, f_kernel_map_projection and f_kernel_map_exit from Module GateKernels
+        //nvtxRangePush("get symbol call_all");
         JL_GC_PUSH1(&juliaKernelsModule);
         jl_function_t *call_all = (jl_function_t*)p_jl_get_global(juliaKernelsModule, p_jl_symbol("call_all"));
         JL_GC_POP();
-
+        //nvtxRangePop();
         // Wrappers
         // px, py, pz
+        //nvtxRangePush("wrappers");
         jl_array_t *jl_px = p_jl_ptr_to_array_1d(array_float32, particle->px, particle_size, 0);
         jl_array_t *jl_py = p_jl_ptr_to_array_1d(array_float32, particle->py, particle_size, 0);
         jl_array_t *jl_pz = p_jl_ptr_to_array_1d(array_float32, particle->pz, particle_size, 0);
-
+        
         // dx, dy, dz
         jl_array_t *jl_dx = p_jl_ptr_to_array_1d(array_float32, particle->dx, particle_size, 0);
         jl_array_t *jl_dy = p_jl_ptr_to_array_1d(array_float32, particle->dy, particle_size, 0);
@@ -330,11 +349,13 @@ void GateJuliaCollimator_process(GateGPUCollimator *collimator, GateGPUParticle 
         // exit_collim_y exit_collim_z
         jl_array_t *jl_exit_collim_y = p_jl_ptr_to_array_1d(array_float32, collimator->exit_collim_y, y_size, 0);
         jl_array_t *jl_exit_collim_z = p_jl_ptr_to_array_1d(array_float32, collimator->exit_collim_z, z_size, 0);
-
+        
         // Array of holes heap
-        jl_array_t* jl_hole = p_jl_alloc_array_1d(array_int32, particle_size);
-
+        jl_array_t* jl_hole = p_jl_ptr_to_array_1d(array_int32, h_hole, particle_size, 0);
+        //nvtxRangePop();
+        //nvtxRangePush("arguments");
         // Args call_all
+        printf("args\n");
         jl_value_t **args;
         JL_GC_PUSHARGS(args,17);
         args[0] = (jl_value_t*)jl_px;
@@ -354,19 +375,25 @@ void GateJuliaCollimator_process(GateGPUCollimator *collimator, GateGPUParticle 
         args[14] = p_jl_box_int32(particle_size);
         args[15] = p_jl_box_int32(grid_size);
         args[16] = p_jl_box_int32(block_size);
-        
+        //nvtxRangePop();
         // Call call_all
+        //nvtxRangePush("call Julia method");
+        printf("call\n");
         struct RetProjection *retproj = (RetProjection *)p_jl_call(call_all,args,17);
-
+        
+        //nvtxRangePop();
+        //nvtxRangePush("accesing results");
+        printf("accesing res\n");
         // Accessing result data
         int *res_hole = (int*)jl_array_data(retproj->hole);
-
+        
         float* px_res = (float*)jl_array_data(retproj->px);
         float* py_res = (float*)jl_array_data(retproj->py);
         float* pz_res = (float*)jl_array_data(retproj->pz);
 
+        //nvtxRangePop();
         JL_GC_POP();
-        
+        printf("pack data to cpu\n");
         // Pack data to CPU
         int c = 0;
         int i = 0;
@@ -377,7 +404,7 @@ void GateJuliaCollimator_process(GateGPUCollimator *collimator, GateGPUParticle 
                 ++i;
                 continue;
             }
-            //h_hole[ c ] = h_hole[ i ];
+            //res_hole[ c ] = res_hole[ i ];
             particle->px[ c ] = px_res[ i ];
             particle->py[ c ] = py_res[ i ];
             particle->pz[ c ] = pz_res[ i ];
@@ -394,5 +421,10 @@ void GateJuliaCollimator_process(GateGPUCollimator *collimator, GateGPUParticle 
             ++i;
         }
         particle->size = c;
+        printf("end\n");
+        free(h_hole);
     }
+    //nvtxRangePop();
+    //cuProfilerStop();
+    
 }

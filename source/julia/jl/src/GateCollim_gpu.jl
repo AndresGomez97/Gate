@@ -110,23 +110,36 @@ function call_all(px::Array{Float32},py::Array{Float32},pz::Array{Float32},
                   hole::Array{Int32},size_y::UInt32,size_z::UInt32,planeToProject::Float32,
                   particle_size::Int32,nBlocks::CuDim,nThreads::CuDim)
     
-    d_px = CuArray(px)
-    d_py = CuArray(py) 
-    d_pz = CuArray(pz) 
-    d_dx = CuArray(dx)
-    d_dy = CuArray(dy)
-    d_dz = CuArray(dz)
-    d_hole = CuArray(hole) 
-    d_entry_collim_y = CuArray(entry_collim_y)
-    d_entry_collim_z = CuArray(entry_collim_z)
-    d_exit_collim_y = CuArray(exit_collim_y)
-    d_exit_collim_z = CuArray(exit_collim_z) 
-
-    @cuda blocks=nBlocks threads=nThreads kernel_map_entry(d_py, d_pz, d_entry_collim_y, d_entry_collim_z, d_hole, size_y, size_z, particle_size)
-    @cuda blocks=nBlocks threads=nThreads kernel_map_projection(d_px, d_py, d_pz, d_dx, d_dy, d_dz, d_hole, planeToProject, particle_size)
-    @cuda blocks=nBlocks threads=nThreads kernel_map_exit(d_py, d_pz, d_exit_collim_y, d_exit_collim_z, d_hole, size_y, size_z, particle_size)
+    NVTX.@range "HostToDevice" begin           
+        d_px = CuArray(px)
+        d_py = CuArray(py) 
+        d_pz = CuArray(pz) 
+        d_dx = CuArray(dx)
+        d_dy = CuArray(dy)
+        d_dz = CuArray(dz)
+        d_hole = CuArray(hole) 
+        d_entry_collim_y = CuArray(entry_collim_y)
+        d_entry_collim_z = CuArray(entry_collim_z)
+        d_exit_collim_y = CuArray(exit_collim_y)
+        d_exit_collim_z = CuArray(exit_collim_z) 
+    end
+    NVTX.@range "kernel_map_entry" begin
+        @cuda blocks=nBlocks threads=nThreads kernel_map_entry(d_py, d_pz, d_entry_collim_y, d_entry_collim_z, d_hole, size_y, size_z, particle_size)
+    end
+    NVTX.@range "kernel_map_projection" begin
+        @cuda blocks=nBlocks threads=nThreads kernel_map_projection(d_px, d_py, d_pz, d_dx, d_dy, d_dz, d_hole, planeToProject, particle_size)
+    end
+    NVTX.@range "kernel_map_exit" begin
+        @cuda blocks=nBlocks threads=nThreads kernel_map_exit(d_py, d_pz, d_exit_collim_y, d_exit_collim_z, d_hole, size_y, size_z, particle_size)
+    end
     
-    return (Array{Float32}(d_px),Array{Float32}(d_py),Array{Float32}(d_pz),Array{Int32}(d_hole))
+    NVTX.@range "DeviceToHost" begin
+        px = Array{Float32}(d_px)
+        py = Array{Float32}(d_py)
+        pz = Array{Float32}(d_pz)
+        hole = Array{Int32}(d_hole)
+    end
+    return (px,py,pz,hole)
 end
 
 function call_entry(px::Array{Float32},py::Array{Float32},pz::Array{Float32},
@@ -178,3 +191,14 @@ function call_exit(px::Array{Float32},py::Array{Float32},pz::Array{Float32},
 end
 
 #-----------------------------------------------------------------------------------------------
+
+#PROFILING
+function nvprof(px::Array{Float32},py::Array{Float32},pz::Array{Float32},
+    dx::Array{Float32},dy::Array{Float32},dz::Array{Float32},
+    entry_collim_y::Array{Float32},entry_collim_z::Array{Float32},
+    exit_collim_y::Array{Float32},exit_collim_z::Array{Float32},
+    hole::Array{Int32},size_y::UInt32,size_z::UInt32,planeToProject::Float32,
+    particle_size::Int32,nBlocks::CuDim,nThreads::CuDim)
+
+    CUDAdrv.@profile call_all(px,py,pz,dx,dy,dz,entry_collim_y,entry_collim_z,exit_collim_y,exit_collim_z,hole,size_y,size_z,planeToProject,particle_size,nBlocks,nThreads)
+end
