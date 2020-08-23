@@ -84,7 +84,7 @@ void GateRunManager::InitializeAll()
 
    // Initializing Julia and compiling julia files
   GateMessage("Core", 0, "Initialization of julia\n");
-  JuliaMgr::GetInstance();
+  JuliaMgr::GetInstance().run([] {p_jl_eval_string("include(\"/home/agmez/gate/Gate/source/julia/jl/src/JuliaKernels.jl\")"); });
 
   // Get the build-in physic list if the user ask for it
   // Note the EM-only physic lists has already been build in GatePhysicsList
@@ -238,8 +238,46 @@ void GateRunManager::RunInitialization()
 
 
 //----------------------------------------------------------------------------------------
-void GateRunManager::JuliaREPL()
-{
-  JuliaMgr::GetInstance().run([] { p_jl_eval_string("println(\"JULIA REPL\")"); });
+void GateRunManager::JuliaREPL(G4String str){
+  JuliaMgr::GetInstance().run([str] { p_jl_eval_string(str);});
+}
+
+void GateRunManager::JuliaErr(){
+  JuliaMgr::GetInstance().run([] { 
+    p_jl_eval_string("println(\"------------------- Bounds Error -------------------\")"); 
+    p_jl_eval_string("a=[1,2,3,4]; println(a[0])");  
+    p_jl_eval_string("println(\"-------------------- Load Error --------------------\")"); 
+    p_jl_eval_string("include(\"UnexistingFile.jl\")"); 
+    p_jl_eval_string("println(\"------------------ Division Error ------------------\")");
+    p_jl_eval_string("div(2,0)");
+    p_jl_eval_string("println(\"-------------------- Domain Error ------------------\")");
+    p_jl_eval_string("sqrt(-1)");
+    p_jl_eval_string("println(\"################## Now from a file #################\")");
+    p_jl_eval_string("println(\"-------------- File with a Bounds Error ------------\")"); 
+    p_jl_eval_string("include(\"/home/agmez/gate/Gate/source/julia/jl/src/BoundsError.jl\")");  
+    p_jl_eval_string("println(\"------------ File with a Division Error ------------\")");
+    p_jl_eval_string("include(\"/home/agmez/gate/Gate/source/julia/jl/src/DivisionError.jl\")");
+    p_jl_eval_string("println(\"-------------- File with a Domain Error ------------\")");
+    p_jl_eval_string("include(\"/home/agmez/gate/Gate/source/julia/jl/src/DomainError.jl\")");
+  });
+}
+
+void GateRunManager::JuliaComp(){
+  clock_t start = clock();
+  double difference = 0;
+  JuliaMgr::GetInstance().run([] { 
+    p_jl_eval_string("println(\"-------------- Julia Code Compiling ------------\")"); 
+    p_jl_eval_string("println(\"FIRST CALL\")"); 
+    p_jl_eval_string("using CUDA");
+  });
+  difference = (double)(clock() - start)/(double)CLOCKS_PER_SEC;
+  printf("Time in seconds: %g\n",difference);
+  start = clock();
+  JuliaMgr::GetInstance().run([] { 
+    p_jl_eval_string("println(\"SECOND CALL\")"); 
+    p_jl_eval_string("using CUDA");
+  });
+  difference = (double)(clock() - start)/(double)CLOCKS_PER_SEC;
+  printf("Time in seconds: %g\n",difference);
 }
 //----------------------------------------------------------------------------------------

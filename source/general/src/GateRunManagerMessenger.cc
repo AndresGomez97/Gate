@@ -28,9 +28,14 @@ GateRunManagerMessenger::GateRunManagerMessenger(GateRunManager* runManager)
   pRunEnableGlobalOutputCmd = new G4UIcmdWithABool("/gate/run/enableGlobalOutput",this);
   pRunEnableGlobalOutputCmd->SetGuidance("Enabled by default. Use 'false' only for applications that do not use 'systems' (PET, SPECT etc), it will be a bit faster.");
 
-  pRunJuliaREPL = new G4UIcmdWithoutParameter("/gate/run/juliarepl",this);
+  pRunJuliaREPL = new G4UIcmdWithAString("/gate/run/juliarepl",this);
   pRunJuliaREPL->SetGuidance("Initialize Julia REPL. Use ctrl+D to end JuliaREPL.");
-  //pRunJuliaREPL->SetParameterName("juliacode",false);
+    
+  pJuliaErr = new G4UIcmdWithoutParameter("/gate/run/juliaerr",this);
+  pRunJuliaREPL->SetGuidance("Caller for testing Julia integration. (Error handling)");
+  
+  pJuliaComp = new G4UIcmdWithoutParameter("/gate/run/juliacomp",this);
+  pRunJuliaREPL->SetGuidance("Caller for testing Julia integration. (Julia Compiling)");
 
 }
 //----------------------------------------------------------------------------------------
@@ -42,6 +47,8 @@ GateRunManagerMessenger::~GateRunManagerMessenger()
   delete pRunGeomUpdateCmd;
   delete pRunEnableGlobalOutputCmd;
   delete pRunJuliaREPL;
+  delete pJuliaErr;
+  delete pJuliaComp;
 }
 //----------------------------------------------------------------------------------------
 
@@ -58,7 +65,13 @@ void GateRunManagerMessenger::SetNewValue(G4UIcommand* command, G4String newValu
     pRunManager->EnableGlobalOutput(pRunEnableGlobalOutputCmd->GetNewBoolValue(newValue));
   }
   else if (command == pRunJuliaREPL) {
-    pRunManager->JuliaREPL();
+    pRunManager->JuliaREPL(newValue);
+  }  
+  else if (command == pJuliaErr) {
+    pRunManager->JuliaErr();
+  }
+  else if (command == pJuliaComp) {
+    pRunManager->JuliaComp();
   }
 }
 //----------------------------------------------------------------------------------------

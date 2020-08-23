@@ -17,6 +17,10 @@
 
 #include "GateActions.hh"
 
+// Nvidia Profiling tools
+#include <cudaProfiler.h>
+#include <nvToolsExt.h>
+
 GateTrajectoryNavigator::GateTrajectoryNavigator() : m_trajectoryContainer(NULL), m_positronTrackID(0), m_positronTrj(NULL), m_ionID(0), nVerboseLevel(0)
 {
 }
@@ -253,6 +257,7 @@ TrackingMode theMode =( (GateSteppingAction *)(GateRunManager::GetRunManager()->
 // search the gamma from which this track comes --> photonID
 G4int GateTrajectoryNavigator::FindPhotonID(G4int trackID)
 {
+  nvtxRangePush("FindPhotonID");
   if (nVerboseLevel > 2)
     G4cout << "GateTrajectoryNavigator::FindPhotonID \n";
   G4int photonID = 0;
@@ -298,13 +303,14 @@ G4int GateTrajectoryNavigator::FindPhotonID(G4int trackID)
 
     }
   }
-
+  nvtxRangePop();
   return photonID;
 }
 
 
 G4int GateTrajectoryNavigator::FindPrimaryID(G4int trackID)
 {
+  nvtxRangePush("FindPrimaryID");
   G4int primaryID = 0;
 
   if (!m_trajectoryContainer) {
@@ -329,7 +335,7 @@ G4int GateTrajectoryNavigator::FindPrimaryID(G4int trackID)
       }
     } while (tempParentID != 0);
   }
-
+  nvtxRangePop();
   return primaryID;
 }
 

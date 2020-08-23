@@ -8,7 +8,7 @@ void *p_handle(void){
     void *handle = dlopen("/home/agmez/julia-1.3.1/lib/libjulia.so", RTLD_LAZY | RTLD_GLOBAL); 
     if(!handle){
         fprintf(stderr, "%s\n", dlerror());
-        exit(EXIT_FAILURE);
+        exit(3);
     }
     return handle;
 }
@@ -17,13 +17,36 @@ void p_jl_init(void){
     t_jl_init jl_init = (t_jl_init)dlsym(p_handle(), "jl_init__threading");
     jl_init();
 }
+void p_jl_init_with_image(const char *julia_bindir, const char *image_relative_path){
+    t_jl_init_with_image jl_init_with_image = (t_jl_init_with_image)dlsym(p_handle(), "jl_init_with_image__threading");
+    jl_init_with_image(julia_bindir, image_relative_path);
+}
 int p_jl_atexit_hook(int v){
     t_jl_atexit_hook jl_atexit_hook = (t_jl_atexit_hook)dlsym(p_handle(), "jl_atexit_hook");
     return jl_atexit_hook(v);
 }
 jl_value_t *p_jl_eval_string(const char *v){
+    
     t_jl_eval_string jl_eval_string = (t_jl_eval_string)dlsym(p_handle(), "jl_eval_string");
-    return jl_eval_string(v);
+    t_jl_stderr_obj jl_stderr_obj = (t_jl_stderr_obj)dlsym(p_handle(),"jl_stderr_obj");
+    t_jl_stderr_stream jl_stderr_stream = (t_jl_stderr_stream)dlsym(p_handle(),"jl_stderr_stream");
+    t_jl_call2 jl_call2 = (t_jl_call2)dlsym(p_handle(),"jl_call2");
+    t_jl_printf jl_printf = (t_jl_printf)dlsym(p_handle(),"jl_printf");
+
+    jl_value_t* ret = jl_eval_string(v);
+    jl_value_t *exc_occurred = p_jl_exception_occurred();
+    if (exc_occurred){
+        jl_module_t *base_module = (jl_module_t*)p_jl_eval_string("Base");
+        jl_call2((jl_function_t*)p_jl_get_global(base_module, p_jl_symbol("showerror")), jl_stderr_obj(), exc_occurred);
+        uv_stream_t stderr_str = jl_stderr_stream();
+        uv_stream_t *p_jl_stderr_stream = &stderr_str;
+        jl_printf(p_jl_stderr_stream, "\n");
+        printf("\n");
+        return ret;
+    }
+    else{
+        return ret;
+    }
 }
 jl_value_t *p_jl_apply_array_type(jl_value_t *type,size_t dim){
     t_jl_apply_array_type jl_apply_array_type = (t_jl_apply_array_type)dlsym(p_handle(),"jl_apply_array_type");
@@ -70,4 +93,14 @@ jl_value_t *p_jl_box_float32(float x){
 int64_t p_jl_unbox_int64(jl_value_t *v){
     t_jl_unbox_int64 jl_unbox_int64 = (t_jl_unbox_int64)dlsym(p_handle(),"jl_unbox_int64");
     return jl_unbox_int64(v);
+}
+
+// Error handling
+jl_value_t* p_jl_exception_occurred(void){
+    t_jl_exception_occurred jl_exception_occurred = (t_jl_exception_occurred)dlsym(p_handle(),"jl_exception_occurred");
+    return jl_exception_occurred();
+}
+char* p_jl_typeof_str(jl_value_t *v){
+    t_jl_typeof_str jl_typeof_str = (t_jl_typeof_str)dlsym(p_handle(),"jl_typeof_str");
+    return jl_typeof_str(v);
 }

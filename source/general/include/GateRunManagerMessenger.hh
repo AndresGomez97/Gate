@@ -29,7 +29,9 @@ class GateRunManagerMessenger : public G4UImessenger
     G4UIcmdWithoutParameter* pRunInitCmd;
     G4UIcmdWithoutParameter* pRunGeomUpdateCmd;
     G4UIcmdWithABool* pRunEnableGlobalOutputCmd;  
-    G4UIcmdWithoutParameter* pRunJuliaREPL;
+    G4UIcmdWithAString* pRunJuliaREPL;
+    G4UIcmdWithoutParameter* pJuliaErr;
+    G4UIcmdWithoutParameter* pJuliaComp;
 };
 //-----------------------------------------------------------------------------
 

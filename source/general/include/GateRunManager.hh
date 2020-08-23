@@ -59,8 +59,14 @@ public:
   void RunInitialization();
 
   //! Initialize Julia REPL
-  void JuliaREPL();
-
+  void JuliaREPL(G4String string);
+  
+  // Error handling
+  void JuliaErr();
+  
+  // Thread Async
+  void JuliaComp();
+  
   //! Return the instance of the run manager
   static GateRunManager* GetRunManager()
   {	return dynamic_cast<GateRunManager*>(G4RunManager::GetRunManager()); }

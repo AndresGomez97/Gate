@@ -1,7 +1,7 @@
 include("../src/CUDACallKernels.jl")
 include("../src/JuliaKernels.jl")
 
-using Test, BenchmarkTools, CuArrays, CUDAdrv, CUDAnative
+using Test, BenchmarkTools, CUDA
 
 # Dims
 dims = (3,3)
@@ -588,7 +588,6 @@ function test_kernel_map_exit()
 	println("")
 end
 
-############################################################################################################
 function init_data()
 	particle_size = Int32(22540)
 
@@ -736,81 +735,6 @@ function test_call_all()
 	println(allhole==cchole)
 end
 
-function profiling()
-	
-	px,py,pz,dx,dy,dz,hole,entry_collim_y,entry_collim_z,exit_collim_y,exit_collim_z,planeToProject,size_y,size_z,particle_size,nBlocks,nThreads = init_data()
-	
-	println("------------- USING @time MACRO -------------")
-	println("Warmup")
-	@time hole = JuliaKernels.call_entry(px,py,pz,entry_collim_y,entry_collim_z,hole,size_y,size_z,particle_size,nBlocks,nThreads)
-	println("Entry")
-	@time hole = JuliaKernels.call_entry(px,py,pz,entry_collim_y,entry_collim_z,hole,size_y,size_z,particle_size,nBlocks,nThreads)
-	println("Projection")
-	@time px,py,pz = JuliaKernels.call_projection(px,py,pz,dx,dy,dz,hole,planeToProject,particle_size,nBlocks,nThreads)
-	println("Exit")
-	@time hole = JuliaKernels.call_exit(px,py,pz,exit_collim_y,exit_collim_z,hole,size_y,size_z,particle_size,nBlocks,nThreads)
-end
-
-function benchmark_entry()
-
-	px,py,pz,dx,dy,dz,hole,entry_collim_y,entry_collim_z,exit_collim_y,exit_collim_z,planeToProject,size_y,size_z,particle_size,nBlocks,nThreads = init_data()
-
-	println("---------- USING @benchmark MACRO ----------")
-	println("W")
-	@benchmark CuArrays.@sync $hole = JuliaKernels.call_entry($px,$py,$pz,$entry_collim_y,$entry_collim_z,$hole,$size_y,$size_z,$particle_size,$nBlocks,$nThreads)
-	#=
-	println("Entry")
-	@benchmark CuArrays.@sync $hole = JuliaKernels.call_entry($px,$py,$pz,$entry_collim_y,$entry_collim_z,$hole,$size_y,$size_z,$particle_size,$nBlocks,$nThreads)
-	println("Projection")
-	@benchmark CuArrays.@sync $px,$py,$pz = JuliaKernels.call_projection($px,$py,$pz,$dx,$dy,$dz,$hole,$planeToProject,$particle_size,$nBlocks,$nThreads)
-	println("Exit")
-	@benchmark CuArrays.@sync $hole = JuliaKernels.call_exit($px,$py,$pz,$exit_collim_y,$exit_collim_z,$hole,$size_y,$size_z,$particle_size,$nBlocks,$nThreads)
-	=#
-end
-
-function nvprof()
-	NVTX.@range "init_data" begin
-		px,py,pz,dx,dy,dz,hole,entry_collim_y,entry_collim_z,exit_collim_y,exit_collim_z,planeToProject,size_y,size_z,particle_size,nBlocks,nThreads = init_data()
-	end
-	NVTX.@range "call_all" begin
-		res_px,res_py,res_pz,res_hole = JuliaKernels.call_all(px,py,pz,dx,dy,dz,entry_collim_y,entry_collim_z,exit_collim_y,exit_collim_z,hole,size_y,size_z,planeToProject,particle_size,nBlocks,nThreads)
-	end
-end
-
-function multiple_runs()
-	println("------------- USING @profile MACRO -------------")
-	NVTX.@range "run1" begin
-		nvprof()
-	end
-	NVTX.@range "run2" begin
-		nvprof()
-	end
-	NVTX.@range "run3" begin
-		nvprof()
-	end
-	NVTX.@range "run4" begin
-		nvprof()
-	end
-	NVTX.@range "run5" begin
-		nvprof()
-	end
-	NVTX.@range "run6" begin
-		nvprof()
-	end
-	NVTX.@range "run7" begin
-		nvprof()
-	end
-	NVTX.@range "run8" begin
-		nvprof()
-	end
-	NVTX.@range "run9" begin
-		nvprof()
-	end
-	NVTX.@range "run10" begin
-		nvprof()
-	end
-end
-
 #---------------------------------------- Calls ----------------------------------------------
 #test_binary_search()
 #test_kernel_map_entry()
@@ -818,7 +742,4 @@ end
 #test_kernel_map_exit()
 #test_call_1by1()
 #test_call_all()
-#profiling()
-#benchmark_entry()
-#CUDAdrv.@profile multiple_runs()
 #---------------------------------------------------------------------------------------------

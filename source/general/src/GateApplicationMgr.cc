@@ -23,6 +23,10 @@
 #include "GateOutputMgr.hh"
 #include <algorithm> /* min and max */
 
+// Nvidia Profiling tools
+#include <cudaProfiler.h>
+#include <nvToolsExt.h>
+
 GateApplicationMgr* GateApplicationMgr::instance = 0;
 //------------------------------------------------------------------------------------------
 GateApplicationMgr::GateApplicationMgr():
@@ -290,42 +294,49 @@ void GateApplicationMgr::StartDAQComplete(G4ThreeVector param)
 //------------------------------------------------------------------------------------------
 void GateApplicationMgr::StartDAQ()
 {
-
+  cuProfilerStart();
+  nvtxRangePush("StartDAQ");
   // With this method we check for all output module enabled but with no
   // filename given. In this case we disable the output module and send a warning.
+  nvtxRangePush("CheckFileNameForAllOutput");
   GateOutputMgr::GetInstance()->CheckFileNameForAllOutput();
-
+  nvtxRangePop();
+  nvtxRangePush("GateSourceMgr Intitialization()");
   GateMessage("Acquisition", 0,"  \n");
   GateMessage("Acquisition", 0, "============= Source initialization =============\n");
-
+  
   // init sources if needed
   GateSourceMgr::GetInstance()->Initialization();
-
+  nvtxRangePop();
+  nvtxRangePush("InitializeTimeSlices()");
   GateMessage("Acquisition", 0,"  \n");
   GateMessage("Acquisition", 0, "============= Acquisition starts! =============\n");
   InitializeTimeSlices();
-
+  nvtxRangePop();
+  
   // Verbose
   GateMessage("Acquisition", 0, "Simulation start time = " << mTimeSlices.front()/s << " sec\n");
   GateMessage("Acquisition", 0, "Simulation end time   = " << mTimeSlices.back()/s << " sec\n");
   GateMessage("Acquisition", 0, "Simulation will have  = " << (mTimeSlices.size()-1) << " run(s)\n");
   //GateMessage("Acquisition", 0, "Simulation will generate " << mTotalNbOfParticles << " primaries.\n");
-
+  nvtxRangePush("GateRandomEngine Initialize()");
   // Initialize the random engine for the entire simulation
   GateRandomEngine* theRandomEngine = GateRandomEngine::GetInstance();
   theRandomEngine->Initialize();
   if (theRandomEngine->GetVerbosity()>=1) theRandomEngine->ShowStatus();
-
+  nvtxRangePop();
+  nvtxRangePush("GateClock");
   GateClock* theClock = GateClock::GetInstance();
-
+  nvtxRangePop();
   m_clusterStart = mTimeSlices.front();
   m_clusterStop = mTimeSlices.back();
-
+  nvtxRangePush("GateOutputMgr RecordBeginOfAcquisition()");
   if (mOutputMode)
     GateOutputMgr::GetInstance()->RecordBeginOfAcquisition();
-
+  nvtxRangePop();
   G4int slice=0;
   m_time = mTimeSlices.front();
+  nvtxRangePush("While loop time slices");
   while(m_time < mTimeSlices.back())
     {
       // Informational message about the current slice
@@ -339,10 +350,11 @@ void GateApplicationMgr::StartDAQ()
       m_time = mTimeSlices[slice];
       GateMessage("Geometry", 5, " Time is going to change :  = " << m_time/s << Gateendl;);
       theClock->SetTime(m_time);
-
+      
       // calculate the time steps for total primaries mode
       if(mATotalAmountOfPrimariesIsRequested)
         {
+          nvtxRangePush("mATotalAmountOfPrimariesIsRequested");
           if(mAnAmountOfPrimariesPerRunIsRequested)
             {
               mTimeStepInTotalAmountOfPrimariesMode = GetTimeSlice(slice)/mRequestedAmountOfPrimariesPerRun;
@@ -354,28 +366,41 @@ void GateApplicationMgr::StartDAQ()
               mRequestedAmountOfPrimariesPerRun = int(mTimeSlices[slice+1]/mTimeStepInTotalAmountOfPrimariesMode)
                 - int(mTimeSlices[slice]/mTimeStepInTotalAmountOfPrimariesMode);
             }
+          nvtxRangePush("SetRunIDCounter");
           GateRunManager::GetRunManager()->SetRunIDCounter(slice);                    // Must explicitly keep the RunID in sync with the slice #
+          nvtxRangePop();
+          nvtxRangePush("BeamOn");
           GateRunManager::GetRunManager()->BeamOn(mRequestedAmountOfPrimariesPerRun); // otherwise RunID is automatically incremented
           m_time = mTimeSlices[slice+1];
+          nvtxRangePop();
+          nvtxRangePop();
         }
       else
         {
+          nvtxRangePush("NO mATotalAmountOfPrimariesIsRequested");
           while(m_time<GetEndTimeSlice(slice))  // sometimes a single slice might require more than MAX_INT events
             {
+              nvtxRangePush("SetRunIDCounter");
               GateRunManager::GetRunManager()->SetRunIDCounter(slice); // Must explicitly keep the RunID in sync with the slice #
+              nvtxRangePop();
+              nvtxRangePush("BeamOn");
               GateRunManager::GetRunManager()->BeamOn(INT_MAX);        // otherwise RunID is automatically incremented
               theClock->SetTimeNoGeoUpdate(m_time);
+              nvtxRangePop();
             }
+            nvtxRangePop();
         }
 
       slice++;
     }
-
+  nvtxRangePop();
+  nvtxRangePush("GateOutputMgr RecordEndOfAcquisition()");
   if (mOutputMode) GateOutputMgr::GetInstance()->RecordEndOfAcquisition();
-
+  nvtxRangePop();
   for(int nsource= 0 ; nsource<GateSourceMgr::GetInstance()->GetNumberOfSources() ; nsource++ )
     GateMessage("Acquisition", 1, "Source "<<nsource+1<<" --> Number of events = "<<GateSourceMgr::GetInstance()->GetNumberOfEventBySource(nsource+1)<< Gateendl);
-
+  nvtxRangePop();
+  cuProfilerStop();
 }
 //------------------------------------------------------------------------------------------
 

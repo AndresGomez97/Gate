@@ -28,6 +28,10 @@
 
 #include "GateObjectStore.hh"
 
+// Nvidia Profiling tools
+#include <cudaProfiler.h>
+#include <nvToolsExt.h>
+
 // Name of the hit collection
 const G4String GateCrystalSD::theCrystalCollectionName = "crystalCollection";
 
@@ -78,7 +82,7 @@ void GateCrystalSD::Initialize(G4HCofThisEvent*HCE)
 //G4bool GateCrystalSD::ProcessHits(G4Step*aStep,G4TouchableHistory*ROhist)
 G4bool GateCrystalSD::ProcessHits(G4Step*aStep, G4TouchableHistory*)
 {
-
+  nvtxRangePush("GateCrystalSD ProcessHits");
   // Get the track information
   G4Track* aTrack       = aStep->GetTrack();
   G4int    trackID      = aTrack->GetTrackID();
@@ -183,7 +187,7 @@ G4bool GateCrystalSD::ProcessHits(G4Step*aStep, G4TouchableHistory*)
 
   // Insert the new hit into the hit collection
   crystalCollection->insert( aHit );
-
+  nvtxRangePop();
   return true;
 }
 //------------------------------------------------------------------------------

@@ -16,6 +16,9 @@ See LICENSE.md for further details
 
 #include "GateCrystalHit.hh"
 
+// Nvidia Profiling tools
+#include <cudaProfiler.h>
+#include <nvToolsExt.h>
 
 G4Allocator<GateCrystalHit> GateCrystalHitAllocator;
 

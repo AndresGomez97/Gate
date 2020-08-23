@@ -1,24 +1,27 @@
 
-#------------------------------------- GateCollim_gpu.cu -----------------------------------------
-# vector_dot method
-function vector_dot(u::Float3,v::Float3)
-    return (u.x * v.x) + (u.y * v.y) + (u.z * v.z)
+#------------------------------------- Structs -----------------------------------------
+# Float3 struct
+struct Float3
+    x::Float32
+    y::Float32
+    z::Float32
 end
+
+#------------------------------------- Kernels -----------------------------------------
+# vector_dot method
+vector_dot(u::Float3,v::Float3) = (u.x * v.x) + (u.y * v.y) + (u.z * v.z)
 
 # vector_sub method
-function vector_sub(u::Float3,v::Float3)
-    return Float3(u.x - v.x, u.y - v.y, u.z - v.z)
-end
+vector_sub(u::Float3,v::Float3) = Float3(u.x - v.x, u.y - v.y, u.z - v.z)
 
 # vector_add method
-function vector_add(u::Float3,v::Float3)
-    return Float3(u.x + v.x, u.y + v.y, u.z + v.z)
-end
+vector_add(u::Float3,v::Float3) = Float3(u.x + v.x, u.y + v.y, u.z + v.z)
 
 # vector_mag method
-function vector_mag(u::Float3,a::Float32)
-    return Float3(u.x * a, u.y * a, u.z * a)
-end
+vector_mag(u::Float3,a::Float32) = Float3(u.x * a, u.y * a, u.z * a)
+
+# Checks if there is in col bounds
+is_in(point,col) = point > col[1] || point < col[end]
 
 # binary_search
 function binary_search(position::Float32,tab,endIdx::UInt32)
@@ -31,12 +34,7 @@ function binary_search(position::Float32,tab,endIdx::UInt32)
     return medIdx-1
 end
 
-# Check if there is in col bounds
-function is_in(point,col)
-    return point > col[1] || point < col[end]
-end
-
-# Kernel kernel_map_entry from GateCollim_gpu.cu
+# kernel_map_entry port from GateCollim_gpu.cu
 function kernel_map_entry(d_py,d_pz,
                           d_entry_collim_y,d_entry_collim_z,d_hole,
                           size_y::UInt32,size_z::UInt32,particle_size::Int32)
@@ -56,7 +54,7 @@ function kernel_map_entry(d_py,d_pz,
     return
 end
 
-# Kernel kernel_map_projection from GateCollim_gpu.cu
+# kernel_map_projection port from GateCollim_gpu.cu
 function kernel_map_projection(d_px, d_py, d_pz, d_dx, d_dy, d_dz, d_hole, planeToProject, particle_size)
     
     id = (blockIdx().x-1) * blockDim().x + threadIdx().x
@@ -77,7 +75,7 @@ function kernel_map_projection(d_px, d_py, d_pz, d_dx, d_dy, d_dz, d_hole, plane
     return
 end
 
-# Kernel kernel_map_exit from GateCollim_gpu.cu
+# kernel_map_exit port from GateCollim_gpu.cu
 function kernel_map_exit(d_py,d_pz,
                          d_exit_collim_y,d_exit_collim_z,d_hole,
                          size_y::UInt32,size_z::UInt32,particle_size::Int32)
@@ -99,7 +97,6 @@ function kernel_map_exit(d_py,d_pz,
         return
     end   
 end
-#-----------------------------------------------------------------------------------------------
 
 
 #------------------------------------- Kernel calls --------------------------------------------
@@ -110,7 +107,8 @@ function call_all(px::Array{Float32},py::Array{Float32},pz::Array{Float32},
                   hole::Array{Int32},size_y::UInt32,size_z::UInt32,planeToProject::Float32,
                   particle_size::Int32,nBlocks::CuDim,nThreads::CuDim)
     
-    NVTX.@range "HostToDevice" begin           
+    # Host to Device memcpy
+    #NVTX.@range "HostToDevice" begin           
         d_px = CuArray(px)
         d_py = CuArray(py) 
         d_pz = CuArray(pz) 
@@ -122,23 +120,27 @@ function call_all(px::Array{Float32},py::Array{Float32},pz::Array{Float32},
         d_entry_collim_z = CuArray(entry_collim_z)
         d_exit_collim_y = CuArray(exit_collim_y)
         d_exit_collim_z = CuArray(exit_collim_z) 
-    end
-    NVTX.@range "kernel_map_entry" begin
+    #end
+    # kernel_map_entry call
+    #NVTX.@range "kernel_map_entry" begin
         @cuda blocks=nBlocks threads=nThreads kernel_map_entry(d_py, d_pz, d_entry_collim_y, d_entry_collim_z, d_hole, size_y, size_z, particle_size)
-    end
-    NVTX.@range "kernel_map_projection" begin
+    #end
+    # kernel_map_projection call
+    #NVTX.@range "kernel_map_projection" begin
         @cuda blocks=nBlocks threads=nThreads kernel_map_projection(d_px, d_py, d_pz, d_dx, d_dy, d_dz, d_hole, planeToProject, particle_size)
-    end
-    NVTX.@range "kernel_map_exit" begin
+    #end
+    # kernel_map_exit call
+    #NVTX.@range "kernel_map_exit" begin
         @cuda blocks=nBlocks threads=nThreads kernel_map_exit(d_py, d_pz, d_exit_collim_y, d_exit_collim_z, d_hole, size_y, size_z, particle_size)
-    end
+    #end
     
-    NVTX.@range "DeviceToHost" begin
+    # Device to Host memcpy
+    #NVTX.@range "DeviceToHost" begin
         px = Array{Float32}(d_px)
         py = Array{Float32}(d_py)
         pz = Array{Float32}(d_pz)
         hole = Array{Int32}(d_hole)
-    end
+    #end
     return (px,py,pz,hole)
 end
 
@@ -191,14 +193,3 @@ function call_exit(px::Array{Float32},py::Array{Float32},pz::Array{Float32},
 end
 
 #-----------------------------------------------------------------------------------------------
-
-#PROFILING
-function nvprof(px::Array{Float32},py::Array{Float32},pz::Array{Float32},
-    dx::Array{Float32},dy::Array{Float32},dz::Array{Float32},
-    entry_collim_y::Array{Float32},entry_collim_z::Array{Float32},
-    exit_collim_y::Array{Float32},exit_collim_z::Array{Float32},
-    hole::Array{Int32},size_y::UInt32,size_z::UInt32,planeToProject::Float32,
-    particle_size::Int32,nBlocks::CuDim,nThreads::CuDim)
-
-    CUDAdrv.@profile call_all(px,py,pz,dx,dy,dz,entry_collim_y,entry_collim_z,exit_collim_y,exit_collim_z,hole,size_y,size_z,planeToProject,particle_size,nBlocks,nThreads)
-end

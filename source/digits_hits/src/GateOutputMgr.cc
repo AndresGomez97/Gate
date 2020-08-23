@@ -35,6 +35,10 @@
 #include "GateARFDataToRoot.hh"
 #include "GateToRoot.hh"
 
+// Nvidia Profiling tools
+#include <cudaProfiler.h>
+#include <nvToolsExt.h>
+
 GateOutputMgr* GateOutputMgr::instance = 0;
 
 
@@ -277,6 +281,7 @@ void GateOutputMgr::RecordEndOfAcquisition()
 //----------------------------------------------------------------------------------
 void GateOutputMgr::RecordStepWithVolume(const GateVVolume * v, const G4Step* step)
 {
+  nvtxRangePush("GateOutputMgr::RecordStepWithVolume");
   GateMessage("Output", 5, " GateOutputMgr::RecordStep\n";);
   if (nVerboseLevel > 2)
     G4cout << "GateOutputMgr::RecordStep\n";
@@ -285,6 +290,7 @@ void GateOutputMgr::RecordStepWithVolume(const GateVVolume * v, const G4Step* st
     if ( m_outputModules[iMod]->IsEnabled() )
       m_outputModules[iMod]->RecordStepWithVolume(v, step);
   }
+  nvtxRangePop();
 }
 //----------------------------------------------------------------------------------
 

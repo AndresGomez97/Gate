@@ -355,7 +355,7 @@ void GateJuliaCollimator_process(GateGPUCollimator *collimator, GateGPUParticle 
         //nvtxRangePop();
         //nvtxRangePush("arguments");
         // Args call_all
-        printf("args\n");
+        //printf("args\n");
         jl_value_t **args;
         JL_GC_PUSHARGS(args,17);
         args[0] = (jl_value_t*)jl_px;
@@ -378,12 +378,12 @@ void GateJuliaCollimator_process(GateGPUCollimator *collimator, GateGPUParticle 
         //nvtxRangePop();
         // Call call_all
         //nvtxRangePush("call Julia method");
-        printf("call\n");
+        //printf("call\n");
         struct RetProjection *retproj = (RetProjection *)p_jl_call(call_all,args,17);
         
         //nvtxRangePop();
         //nvtxRangePush("accesing results");
-        printf("accesing res\n");
+        //printf("accesing res\n");
         // Accessing result data
         int *res_hole = (int*)jl_array_data(retproj->hole);
         
@@ -393,7 +393,7 @@ void GateJuliaCollimator_process(GateGPUCollimator *collimator, GateGPUParticle 
 
         //nvtxRangePop();
         JL_GC_POP();
-        printf("pack data to cpu\n");
+        //printf("pack data to cpu\n");
         // Pack data to CPU
         int c = 0;
         int i = 0;
@@ -421,7 +421,7 @@ void GateJuliaCollimator_process(GateGPUCollimator *collimator, GateGPUParticle 
             ++i;
         }
         particle->size = c;
-        printf("end\n");
+        //printf("end\n");
         free(h_hole);
     }
     //nvtxRangePop();

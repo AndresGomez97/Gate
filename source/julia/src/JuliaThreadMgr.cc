@@ -24,8 +24,8 @@ Worker::~Worker() {
 
 JuliaMgr::JuliaMgr() {
     worker.run([] {
-        p_jl_init();
-        p_jl_eval_string("include(\"/home/agmez/gate/Gate/source/julia/jl/src/JuliaKernels.jl\")");
+        //p_jl_init();
+        p_jl_init_with_image("/home/agmez/julia-1.3.1/bin", "/home/agmez/gate/Gate/julia_environments/custom_sysimage.so");
     });
 }
 
